@@ -2,7 +2,7 @@
 
 A full-stack machine learning application that allows users to draw digits and get real-time predictions using a PyTorch model trained on the MNIST dataset.
 
-**Live Demo**: [http://your-server-ip:8501](http://your-server-ip:8501)
+**Live Demo**: [http://37.27.197.79:8501](http://37.27.197.79:8501)
 
 **GitHub Repository**: [https://github.com/nomad-dormouse/mnist-digit-recognizer](https://github.com/nomad-dormouse/mnist-digit-recognizer)
 
@@ -57,7 +57,7 @@ This project is an end-to-end machine learning application that:
    DB_HOST=localhost
    DB_PORT=5432
    DB_NAME=mnist_db
-   DB_USER=your_username
+   DB_USER=postgres
    DB_PASSWORD=your_password
    ```
 
@@ -75,7 +75,7 @@ This project is an end-to-end machine learning application that:
 
 1. **Build and start the containers:**
    ```bash
-   docker-compose up --build
+   docker-compose up
    ```
 
 2. **Access the application:**
@@ -92,7 +92,6 @@ This project is an end-to-end machine learning application that:
    ```bash
    ./deploy.sh
    ```
-
 3. **Access the deployed application:**
    Open your browser and navigate to `http://your-server-ip:8501`
 
