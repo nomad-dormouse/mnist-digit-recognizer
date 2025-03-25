@@ -106,6 +106,18 @@ def preprocess_image(image):
 def main():
     st.title("Digit Recognizer", anchor=False)
 
+    # Add CSS to hide download buttons
+    st.markdown(
+        """
+        <style>
+        [data-testid="stElementToolbar"] {
+            display: none;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
     # Initialize session state
     if 'prediction' not in st.session_state:
         st.session_state.prediction = None
@@ -119,6 +131,7 @@ def main():
         height=280,
         width=280,
         drawing_mode="freedraw",
+        display_toolbar=False,
         key="canvas",
     )
     
