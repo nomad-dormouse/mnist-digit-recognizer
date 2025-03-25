@@ -27,12 +27,23 @@ DB_PASSWORD = os.getenv('DB_PASSWORD', '')
 
 def get_db_connection():
     try:
-        # Use Unix domain socket connection
-        conn = psycopg2.connect(dbname=DB_NAME)
+        # Try using full connection parameters first
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD
+        )
         return conn
     except psycopg2.Error as e:
-        st.error(f"Database connection failed: {str(e)}")
-        return None
+        try:
+            # Fallback to Unix domain socket connection (for local development)
+            conn = psycopg2.connect(dbname=DB_NAME)
+            return conn
+        except psycopg2.Error as e2:
+            st.error(f"Database connection failed: {str(e2)}")
+            return None
 
 def log_prediction(prediction, true_label, confidence):
     try:
@@ -105,19 +116,7 @@ def preprocess_image(image):
 
 def main():
     st.title("Digit Recognizer", anchor=False)
-
-    # Add CSS to hide download buttons
-    st.markdown(
-        """
-        <style>
-        [data-testid="stElementToolbar"] {
-            display: none;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
+    
     # Initialize session state
     if 'prediction' not in st.session_state:
         st.session_state.prediction = None
@@ -131,7 +130,6 @@ def main():
         height=280,
         width=280,
         drawing_mode="freedraw",
-        display_toolbar=False,
         key="canvas",
     )
     
