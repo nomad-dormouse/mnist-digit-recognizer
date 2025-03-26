@@ -1,6 +1,10 @@
 #!/bin/bash
 
 # Default configuration
+REMOTE_USER="root"
+REMOTE_HOST="37.27.197.79"  # Hetzner server IP
+REMOTE_DIR="/root/mnist-digit-recognizer"
+SSH_KEY="~/.ssh/hatzner_key"
 WEB_CONTAINER_NAME="mnist-digit-recognizer-web-1"
 DB_CONTAINER_NAME="mnist-digit-recognizer-db-1" 
 DB_NAME="mnist_db"
@@ -25,17 +29,17 @@ show_help() {
     echo -e ""
     echo -e "${YELLOW}Options:${NC}"
     echo -e "  -l, --local         View local database (like local web app)"
-    echo -e "  -c, --container     View container database (like server web app) (default)"
+    echo -e "  -c, --container     View server container database (default)"
     echo -e "  -n, --limit=NUMBER  Limit the number of records to show (default: 20)"
     echo -e "  -a, --all           Show all records"
     echo -e "  -h, --help          Show this help message"
     echo -e ""
     echo -e "${YELLOW}Examples:${NC}"
-    echo -e "  ./scripts/view_db.sh                # View container database (20 records)"
+    echo -e "  ./scripts/view_db.sh                # View server container database (20 records)"
     echo -e "  ./scripts/view_db.sh -l             # View local database (20 records)"
-    echo -e "  ./scripts/view_db.sh -n 50          # View container database (50 records)"
+    echo -e "  ./scripts/view_db.sh -n 50          # View server container database (50 records)"
     echo -e "  ./scripts/view_db.sh -l -n 50       # View local database (50 records)"
-    echo -e "  ./scripts/view_db.sh --all          # View all container database records"
+    echo -e "  ./scripts/view_db.sh --all          # View all server container database records"
     exit 0
 }
 
@@ -82,32 +86,39 @@ if [ "$MODE" = "local" ]; then
         exit 1
     fi
 else
-    # Container database mode (default)
-    MODE_DESC="container (like server web app)"
+    # Container database mode (default) - connect to server via SSH
+    MODE_DESC="server container (remote)"
     
-    # Check if Docker is available
-    if ! command -v docker &> /dev/null; then
-        echo -e "${RED}Error: Docker is not installed or not in PATH!${NC}"
+    # Check if SSH is available
+    if ! command -v ssh &> /dev/null; then
+        echo -e "${RED}Error: SSH is not installed or not in PATH!${NC}"
         echo -e "${RED}Use --local to view the local database instead.${NC}"
         exit 1
     fi
     
-    # Check if the db container is running
-    if ! docker ps | grep -q ${DB_CONTAINER_NAME}; then
-        echo -e "${RED}Error: Database container ${DB_CONTAINER_NAME} is not running!${NC}"
-        echo -e "${RED}Use --local to view the local database instead.${NC}"
-        exit 1
-    fi
-    
-    # Define the query execution function for container mode
+    # Define the query execution function for remote container mode
     execute_query() {
-        docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "$1"
+        ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c \"$1\""
     }
     
-    # Define the value query function for container mode
+    # Define the value query function for remote container mode
     query_value() {
-        docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -tAc "$1"
+        ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -tAc \"$1\""
     }
+    
+    # Check if we can connect to the server
+    if ! ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} "echo Connected" &> /dev/null; then
+        echo -e "${RED}Error: Cannot connect to the remote server! Check your SSH configuration.${NC}"
+        echo -e "${RED}Use --local to view the local database instead.${NC}"
+        exit 1
+    fi
+    
+    # Check if the container is running on the server
+    if ! ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} "docker ps | grep ${DB_CONTAINER_NAME}" &> /dev/null; then
+        echo -e "${RED}Error: Database container ${DB_CONTAINER_NAME} is not running on the server!${NC}"
+        echo -e "${RED}Use --local to view the local database instead.${NC}"
+        exit 1
+    fi
 fi
 
 echo -e "${YELLOW}Viewing ${MODE_DESC} database content (limit: $LIMIT)...${NC}"
@@ -227,23 +238,20 @@ if [ "$LABELED_RECORDS" -gt 5 ]; then
         LIMIT 5;"
 fi
 
-echo -e "\n${GREEN}Usage Tips:${NC}"
-echo -e "${GREEN}* View container database (server): ./scripts/view_db.sh ${NC}"
-echo -e "${GREEN}* View local database: ./scripts/view_db.sh --local${NC}"
-echo -e "${GREEN}* Limit results: ./scripts/view_db.sh [--local] --limit=N${NC}"
-echo -e "${GREEN}* View all records: ./scripts/view_db.sh [--local] --all${NC}"
-echo -e "${GREEN}* For help: ./scripts/view_db.sh --help${NC}"
-
 # Display connection mode in summary
 echo -e "\n${YELLOW}Connection Summary:${NC}"
 if [ "$MODE" = "local" ]; then
     echo -e "${GREEN}Connected to local database as user '${DB_USER}'${NC}"
     echo -e "${GREEN}This is the same database your web app uses when running locally${NC}"
 else
-    echo -e "${GREEN}Connected to container database as user '${DB_USER}'${NC}"
+    echo -e "${GREEN}Connected to server database container '${DB_CONTAINER_NAME}' on ${REMOTE_HOST}${NC}"
     echo -e "${GREEN}This is the same database your web app uses when running on the server${NC}"
 fi
 
-# Remote connection tip
-echo -e "\n${YELLOW}Want to connect to the remote server?${NC}"
-echo -e "${GREEN}ssh root@37.27.197.79 \"cd /root/mnist-digit-recognizer && ./scripts/view_db.sh\"${NC}" 
+# Usage tips
+echo -e "\n${GREEN}Usage Tips:${NC}"
+echo -e "${GREEN}* View server container database: ./scripts/view_db.sh ${NC}"
+echo -e "${GREEN}* View local database: ./scripts/view_db.sh --local${NC}"
+echo -e "${GREEN}* Limit results: ./scripts/view_db.sh [--local] --limit=N${NC}"
+echo -e "${GREEN}* View all records: ./scripts/view_db.sh [--local] --all${NC}"
+echo -e "${GREEN}* For help: ./scripts/view_db.sh --help${NC}" 
