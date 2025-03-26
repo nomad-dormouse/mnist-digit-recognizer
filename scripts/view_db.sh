@@ -40,6 +40,24 @@ show_help() {
     exit 0
 }
 
+# Detect if we're running on the server
+is_server() {
+    # Check if this script is running on a server environment
+    # If hostname is localhost or contains 192.168 or domain has 'local', it's likely local
+    hostname=$(hostname)
+    if [[ "$hostname" == "localhost" || "$hostname" =~ "192.168" || "$hostname" =~ ".local" ]]; then
+        return 1  # Not server
+    else
+        # Check if we're in a root-owned directory path that suggests server
+        current_path=$(pwd)
+        if [[ "$current_path" == "/root/"* ]]; then
+            return 0  # Is server
+        fi
+    fi
+    # Default to local environment
+    return 1
+}
+
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -109,18 +127,38 @@ elif [ "$MODE" = "container" ]; then
         docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -tAc "$1"
     }
 else
-    # Web app database mode (mimics the web app's connection behavior)
-    MODE_DESC="web app (simulated)"
-    
-    # Check if Docker is available
-    if ! command -v docker &> /dev/null; then
-        echo -e "${RED}Error: Docker is not installed or not in PATH!${NC}"
-        echo -e "${RED}Falling back to local database.${NC}"
-        MODE="local"
-        MODE_DESC="local (web app fallback)"
+    # Web app database mode - behavior differs between local and server
+    if is_server; then
+        # On server, web app uses containerized database
+        MODE_DESC="web app on server (using container database)"
+        
+        # Check if Docker is available
+        if ! command -v docker &> /dev/null; then
+            echo -e "${RED}Error: Docker is not installed or not in PATH!${NC}"
+            exit 1
+        fi
+        
+        # Check if the db container is running
+        if ! docker ps | grep -q ${DB_CONTAINER_NAME}; then
+            echo -e "${RED}Error: Database container ${DB_CONTAINER_NAME} is not running!${NC}"
+            exit 1
+        fi
+        
+        # Define the query execution function for container mode
+        execute_query() {
+            docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "$1"
+        }
+        
+        # Define the value query function for container mode
+        query_value() {
+            docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -tAc "$1"
+        }
+    else
+        # On local machine, web app uses local database via fallback mechanism
+        MODE_DESC="web app on local (using local database)"
         DB_USER=$(whoami)
         
-        # Define the query execution function for local mode
+        # Define the query execution function for local mode since that's what the app uses locally
         execute_query() {
             psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -c "$1"
         }
@@ -135,72 +173,6 @@ else
             echo -e "${RED}Error: Cannot connect to the local database! Check your PostgreSQL service.${NC}"
             echo -e "${RED}Try running 'psql -d ${DB_NAME}' manually to check the connection.${NC}"
             exit 1
-        fi
-    else
-        # Check if the web container is running
-        if ! docker ps | grep -q ${WEB_CONTAINER_NAME}; then
-            echo -e "${RED}Error: Web container ${WEB_CONTAINER_NAME} is not running!${NC}"
-            echo -e "${RED}Falling back to local database.${NC}"
-            MODE="local"
-            MODE_DESC="local (web app fallback)"
-            DB_USER=$(whoami)
-            
-            # Define the query execution function for local mode
-            execute_query() {
-                psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -c "$1"
-            }
-            
-            # Define the value query function for local mode
-            query_value() {
-                psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -tAc "$1"
-            }
-            
-            # Check if the database is accessible
-            if ! psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -c "SELECT 1" &> /dev/null; then
-                echo -e "${RED}Error: Cannot connect to the local database! Check your PostgreSQL service.${NC}"
-                echo -e "${RED}Try running 'psql -d ${DB_NAME}' manually to check the connection.${NC}"
-                exit 1
-            fi
-        else
-            # Use the web container's connection pattern - mimic app.py connection logic
-            # First try container DB, then fallback to local
-            
-            # Try container DB first
-            if docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "SELECT 1" &> /dev/null; then
-                MODE_DESC="container (web app connection)"
-                # Define the query execution function for container mode via web app logic
-                execute_query() {
-                    docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "$1"
-                }
-                
-                # Define the value query function for container mode via web app logic
-                query_value() {
-                    docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -tAc "$1"
-                }
-            else
-                # Fallback to local as the web app would
-                echo -e "${YELLOW}Cannot connect to container database. Falling back to local database (as web app would).${NC}"
-                MODE="local"
-                MODE_DESC="local (web app fallback)"
-                DB_USER=$(whoami)
-                
-                # Define the query execution function for local mode
-                execute_query() {
-                    psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -c "$1"
-                }
-                
-                # Define the value query function for local mode
-                query_value() {
-                    psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -tAc "$1"
-                }
-                
-                # Check if the database is accessible
-                if ! psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -c "SELECT 1" &> /dev/null; then
-                    echo -e "${RED}Error: Cannot connect to the local database! Check your PostgreSQL service.${NC}"
-                    echo -e "${RED}Try running 'psql -d ${DB_NAME}' manually to check the connection.${NC}"
-                    exit 1
-                fi
-            fi
         fi
     fi
 fi
@@ -336,12 +308,13 @@ elif [ "$MODE" = "container" ]; then
     echo -e "${GREEN}Connected directly to container database '${DB_CONTAINER_NAME}' as user '${DB_USER}'${NC}"
 else
     # Web app mode
-    if [[ "$MODE_DESC" == *"container"* ]]; then
-        echo -e "${GREEN}Connected to container database using web app connection method${NC}"
+    if [[ "$MODE_DESC" == *"server"* ]]; then
+        echo -e "${GREEN}Connected to container database as the web app would on the server${NC}"
         echo -e "${GREEN}Connection details: container=${DB_CONTAINER_NAME}, user=${DB_USER}, database=${DB_NAME}${NC}"
     else
-        echo -e "${GREEN}Connected to local database using web app fallback connection${NC}"
-        echo -e "${GREEN}Connection details: host=${DB_HOST}, user=${DB_USER}, database=${DB_NAME}${NC}"
+        echo -e "${GREEN}Connected to local database as the web app would on your local machine${NC}"
+        echo -e "${GREEN}Note: When running locally, the web app falls back to the local database${NC}"
+        echo -e "${GREEN}      But when running on the server, it uses the container database instead${NC}"
     fi
 fi
 
