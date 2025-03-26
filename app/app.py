@@ -22,28 +22,88 @@ load_dotenv()
 DB_HOST = os.getenv('DB_HOST', 'localhost')
 DB_PORT = os.getenv('DB_PORT', '5432')
 DB_NAME = os.getenv('DB_NAME', 'mnist_db')
-DB_USER = os.getenv('DB_USER', 'dormouse')
-DB_PASSWORD = os.getenv('DB_PASSWORD', '')
+DB_USER = os.getenv('DB_USER', 'postgres')
+DB_PASSWORD = os.getenv('DB_PASSWORD', 'postgres')
+
+# Check if we're running directly on the host machine (not in Docker)
+is_running_locally = not os.environ.get('HOSTNAME', '').startswith('mnist-digit-')
+
+# If running locally and DB_HOST is set to 'db', we need to use localhost instead
+if is_running_locally and DB_HOST == 'db':
+    DB_HOST = 'localhost'
+    st.sidebar.warning("Running locally, using localhost to connect to database")
+
+# Sidebar connection info
+st.sidebar.title("Connection Info")
+st.sidebar.text(f"DB Host: {DB_HOST}")
+st.sidebar.text(f"DB Port: {DB_PORT}")
+st.sidebar.text(f"DB User: {DB_USER}")
+st.sidebar.text(f"DB Name: {DB_NAME}")
 
 def get_db_connection():
+    """Connect to the database using environment variables."""
     try:
-        # Try using full connection parameters first
+        # Log connection attempts
+        st.sidebar.info(f"Attempting to connect to database at {DB_HOST}:{DB_PORT}")
+        
         conn = psycopg2.connect(
             host=DB_HOST,
             port=DB_PORT,
             dbname=DB_NAME,
             user=DB_USER,
-            password=DB_PASSWORD
+            password=DB_PASSWORD,
+            connect_timeout=10  # Increased timeout
         )
+        st.sidebar.success(f"Connected to database at {DB_HOST}:{DB_PORT}!")
         return conn
     except psycopg2.Error as e:
-        try:
-            # Fallback to Unix domain socket connection (for local development)
-            conn = psycopg2.connect(dbname=DB_NAME)
-            return conn
-        except psycopg2.Error as e2:
-            st.error(f"Database connection failed: {str(e2)}")
-            return None
+        st.sidebar.error(f"Database connection failed: {str(e)}")
+        
+        # When using Docker Compose, the service name 'db' should be used
+        if DB_HOST != 'db' and 'docker' in os.environ.get('HOSTNAME', ''):
+            st.sidebar.warning("Trying 'db' as host name...")
+            try:
+                conn = psycopg2.connect(
+                    host='db',
+                    port=DB_PORT,
+                    dbname=DB_NAME,
+                    user=DB_USER,
+                    password=DB_PASSWORD,
+                    connect_timeout=10
+                )
+                st.sidebar.success("Connected to database using 'db' as host!")
+                return conn
+            except psycopg2.Error as e2:
+                st.sidebar.error(f"Connection to 'db' failed: {str(e2)}")
+        
+        # Try Docker container connection
+        if DB_HOST == 'localhost':
+            st.sidebar.warning("Trying Docker container...")
+            try:
+                # Get container IP
+                import subprocess
+                result = subprocess.run(
+                    ["docker", "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", "mnist-digit-recognizer-db-1"],
+                    capture_output=True, text=True, check=True
+                )
+                container_ip = result.stdout.strip()
+                
+                if container_ip:
+                    st.sidebar.info(f"Container IP: {container_ip}")
+                    conn = psycopg2.connect(
+                        host=container_ip,
+                        port=DB_PORT,
+                        dbname=DB_NAME,
+                        user=DB_USER,
+                        password=DB_PASSWORD,
+                        connect_timeout=10
+                    )
+                    st.sidebar.success("Connected via container IP!")
+                    return conn
+            except Exception as container_e:
+                st.sidebar.error(f"Container connection failed: {str(container_e)}")
+        
+        return None
 
 def log_prediction(prediction, true_label, confidence):
     try:
