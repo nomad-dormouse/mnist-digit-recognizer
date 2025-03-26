@@ -39,12 +39,29 @@ This project is an end-to-end machine learning application that:
 ├── docker/                 # Docker configuration files
 ├── saved_models/           # Saved model weights
 ├── deploy.sh               # Deployment script
+├── run_local.sh            # Local setup and run script
 ├── requirements.txt        # Python dependencies
 ├── docker-compose.yml      # Multi-container Docker setup
 └── .env.production         # Production environment variables
 ```
 
 ## Local Development Setup
+
+The easiest way to run the application locally is to use the provided script:
+
+```bash
+./run_local.sh
+```
+
+This script will:
+1. Create and activate a virtual environment if needed
+2. Install all required dependencies
+3. Set up the local PostgreSQL database
+4. Create the necessary tables
+5. Set up all environment variables
+6. Start the Streamlit application
+
+Alternatively, if you want to set things up manually:
 
 1. **Create a virtual environment:**
    ```bash
@@ -67,9 +84,17 @@ This project is an end-to-end machine learning application that:
    DB_PASSWORD=your_password
    ```
 
-4. **Train the model:**
+4. **Set up the PostgreSQL database:**
    ```bash
-   python model/train.py
+   psql -U postgres -c "CREATE DATABASE mnist_db;"
+   psql -U postgres -d mnist_db -c "
+   CREATE TABLE IF NOT EXISTS predictions (
+       id SERIAL PRIMARY KEY,
+       timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+       predicted_digit INTEGER NOT NULL,
+       true_label INTEGER,
+       confidence FLOAT NOT NULL
+   );"
    ```
 
 5. **Run the Streamlit app:**
