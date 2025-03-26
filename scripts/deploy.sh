@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 echo -e "${YELLOW}Deploying MNIST Digit Recognizer to ${REMOTE_HOST}...${NC}"
 
 # Make server_setup.sh script executable
-chmod +x server_setup.sh
+chmod +x scripts/server_setup.sh
 
 # SSH into the remote server and perform deployment
 ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF

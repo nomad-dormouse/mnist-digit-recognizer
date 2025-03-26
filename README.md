@@ -38,8 +38,13 @@ This project is an end-to-end machine learning application that:
 ├── database/               # Database schemas and migrations
 ├── docker/                 # Docker configuration files
 ├── saved_models/           # Saved model weights
-├── deploy.sh               # Deployment script
-├── run_local.sh            # Local setup and run script
+├── scripts/                # Server management and deployment scripts
+│   ├── deploy.sh           # Deployment script
+│   ├── server_setup.sh     # Initial server configuration
+│   ├── backup_db.sh        # Database backup script
+│   ├── restore_db.sh       # Database restoration script
+│   ├── safe_restart.sh     # Safe application restart
+│   └── setup_automated_backups.sh # Setup automated backups
 ├── requirements.txt        # Python dependencies
 ├── docker-compose.yml      # Multi-container Docker setup
 └── .env.production         # Production environment variables
@@ -115,13 +120,13 @@ Alternatively, if you want to set things up manually:
 ## Deployment
 
 1. **Update the deployment script with your server information:**
-   Edit `deploy.sh` and update:
+   Edit `scripts/deploy.sh` and update:
    - `REMOTE_HOST` with your server IP
    - `REPO_URL` with your GitHub repository URL
 
 2. **Run the deployment script:**
    ```bash
-   ./deploy.sh
+   ./scripts/deploy.sh
    ```
 3. **Access the deployed application:**
    Open your browser and navigate to `http://your-server-ip:8501`

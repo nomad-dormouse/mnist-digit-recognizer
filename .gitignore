@@ -58,12 +58,12 @@ force_update_app.sh
 update_app.sh
 
 # Database management scripts
-backup_db.sh
-restore_db.sh
-safe_restart.sh
-setup_automated_backups.sh
-view_db.sh
-view_local_db.sh
+/backup_db.sh
+/restore_db.sh
+/safe_restart.sh
+/setup_automated_backups.sh
+/view_db.sh
+/view_local_db.sh
 
 # Generated HTML
 mnist_samples.html 
