@@ -69,7 +69,7 @@ model/saved_models/**/*.pth
 *.ubyte
 logs/
 *.log
-mnist_samples.html
+scripts/local/mnist_samples.html
 
 # Docker
 .dockerignore

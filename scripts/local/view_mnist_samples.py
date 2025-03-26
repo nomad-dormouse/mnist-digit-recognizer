@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 import plotly.subplots as sp
 
 # File settings
-OUTPUT_FILE = "mnist_samples.html"
+OUTPUT_FILE = os.path.join(os.path.dirname(__file__), "mnist_samples.html")
 GRID_SIZE = 5  # 5x5 grid
 
 # Load MNIST dataset
