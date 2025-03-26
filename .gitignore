@@ -4,7 +4,6 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -16,19 +15,40 @@ lib64/
 parts/
 sdist/
 var/
+wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
 
 # Virtual Environment
 venv/
 ENV/
+env/
+.env
+.venv
+env.bak/
+venv.bak/
 
-# IDE
+# IDE and Editors
 .idea/
 .vscode/
 *.swp
 *.swo
+*~
+.*.sw[op]
+*.sublime-workspace
+*.sublime-project
+.project
+.pydevproject
+.spyderproject
+.spyproject
+.ropeproject
 
 # OS specific
 .DS_Store
@@ -38,17 +58,22 @@ ENV/
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
 # Project specific
-saved_models/*.pth
-model/saved_models/*.pth
-model/data/
-data/
-*.pth
+saved_models/**/*.pth
+model/saved_models/**/*.pth
+**/data/
+**/*.pth
 *.gz
 *.ubyte
 logs/
 *.log
+mnist_samples.html
+
+# Docker
+.dockerignore
+docker-compose.override.yml
 
 # Server utility scripts
 check_remote_app.sh
@@ -56,8 +81,6 @@ check_remote_containers.sh
 fix_remote_db.sh
 force_update_app.sh
 update_app.sh
-
-# Database management scripts
 /backup_db.sh
 /restore_db.sh
 /safe_restart.sh
@@ -65,5 +88,7 @@ update_app.sh
 /view_db.sh
 /view_local_db.sh
 
-# Generated HTML
-mnist_samples.html 
+# Jupyter Notebooks
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+*.ipynb 
