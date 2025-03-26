@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Default configuration
-WEB_CONTAINER_NAME="digitrecogniserformlinstitute-web-1"
-DB_CONTAINER_NAME="digitrecogniserformlinstitute-db-1" 
+WEB_CONTAINER_NAME="mnist-digit-recognizer-web-1"
+DB_CONTAINER_NAME="mnist-digit-recognizer-db-1" 
 DB_NAME="mnist_db"
 DB_USER="postgres"
 DB_PASSWORD="postgres"

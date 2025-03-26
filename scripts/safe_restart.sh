@@ -4,6 +4,7 @@
 PROJECT_DIR="/root/mnist-digit-recognizer"
 BACKUP_DIR="/root/db_backups"
 DB_CONTAINER="mnist-digit-recognizer-db-1"
+WEB_CONTAINER="mnist-digit-recognizer-web-1"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -81,7 +82,7 @@ fi
 
 # Step 5: Restart the web container to ensure it connects to the database
 echo -e "${YELLOW}Step 5: Restarting web container...${NC}"
-docker restart mnist-digit-recognizer-web-1
+docker restart ${WEB_CONTAINER}
 
 echo -e "${GREEN}Safe restart completed successfully!${NC}"
 echo -e "${GREEN}The application should now be running at http://37.27.197.79:8501${NC}" 
