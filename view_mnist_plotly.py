@@ -8,14 +8,8 @@ import webbrowser
 import os
 from torchvision import datasets, transforms
 
-# Load MNIST dataset
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.1307,), (0.3081,))
-])
-
-# Download and load the training data
-mnist_train = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
+# Load MNIST dataset without normalization for visualization
+mnist_train = datasets.MNIST(root='./data', train=True, download=True, transform=transforms.ToTensor())
 
 # Create a figure to display sample images with Plotly
 fig = sp.make_subplots(rows=5, cols=5, 
@@ -30,16 +24,18 @@ for i in range(5):
         img, label = mnist_train[idx]
         digit_labels.append(label)
         
-        # Convert tensor to numpy array
+        # Convert tensor to numpy array (no denormalization needed since we didn't normalize)
         img_array = img.numpy()[0]
         
         # Add image to subplot
         fig.add_trace(
             go.Heatmap(
                 z=img_array,
-                colorscale='gray',
+                colorscale='gray_r',  # Reversed grayscale for proper display (white=0, black=1)
                 showscale=False,
-                hoverinfo='none'
+                hoverinfo='none',
+                zmin=0,
+                zmax=1
             ),
             row=i+1, col=j+1
         )
@@ -75,9 +71,6 @@ file_path = os.path.abspath(output_file)
 # Open the HTML file in the default web browser
 print(f"Opening {output_file} in your default browser...")
 webbrowser.open('file://' + file_path)
-
-# Don't show the figure in-line since we're opening it in the browser
-# fig.show()
 
 print("MNIST dataset visualization complete!")
 print("A random sample of 25 images has been displayed with Plotly.")
