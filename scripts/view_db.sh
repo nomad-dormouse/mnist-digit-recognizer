@@ -37,14 +37,15 @@ while [[ "$#" -gt 0 ]]; do
             echo -e "${YELLOW}Usage:${NC}"
             echo -e "  ./scripts/view_db.sh [options]"
             echo -e "\n${YELLOW}Options:${NC}"
-            echo -e "  -l, --local         View local database (default: server container)"
+            echo -e "  -l, --local         View local Docker container database"
+            echo -e "  (default)           View server container database"
             echo -e "  -n, --limit=NUMBER  Limit the number of records to show (default: 20)"
             echo -e "  -a, --all           Show all records"
             echo -e "  -h, --help          Show this help message"
             echo -e "\n${YELLOW}Examples:${NC}"
-            echo -e "  ./scripts/view_db.sh                # View server container database (20 records)"
-            echo -e "  ./scripts/view_db.sh -l             # View local database (20 records)"
-            echo -e "  ./scripts/view_db.sh -n 50          # View server container database (50 records)"
+            echo -e "  ./scripts/view_db.sh                # View server container database"
+            echo -e "  ./scripts/view_db.sh -l             # View local Docker container database"
+            echo -e "  ./scripts/view_db.sh -n 50          # View with 50 records"
             exit 0 
             ;;
         *) echo -e "${RED}Unknown parameter: $1${NC}"; exit 1 ;;
@@ -54,16 +55,19 @@ done
 
 # Configure database connection based on mode
 if [ "$MODE" = "local" ]; then
-    MODE_DESC="local database"
-    DB_USER=$(whoami)
+    MODE_DESC="local Docker container database"
     
-    # Define query functions for local mode
-    execute_query() { psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -c "$1"; }
-    query_value() { psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -tAc "$1"; }
+    # Define query functions for local Docker container mode
+    execute_query() {
+        docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "$1"
+    }
+    query_value() {
+        docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -tAc "$1"
+    }
     
     # Check connection
-    if ! psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -c "SELECT 1" &> /dev/null; then
-        echo -e "${RED}Error: Cannot connect to the local database!${NC}"
+    if ! docker ps | grep ${DB_CONTAINER_NAME} &> /dev/null; then
+        echo -e "${RED}Error: Local Docker container ${DB_CONTAINER_NAME} is not running!${NC}"
         exit 1
     fi
 else

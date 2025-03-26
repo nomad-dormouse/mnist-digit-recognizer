@@ -6,6 +6,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile
     restart: always
+    container_name: mnist-digit-recognizer-web-1
     ports:
       - "8501:8501"
     depends_on:
@@ -24,6 +25,7 @@ services:
   db:
     image: postgres:13
     restart: always
+    container_name: mnist-digit-recognizer-db-1
     environment:
       - POSTGRES_DB=mnist_db
       - POSTGRES_USER=postgres
