@@ -55,4 +55,13 @@ check_remote_app.sh
 check_remote_containers.sh
 fix_remote_db.sh
 force_update_app.sh
-update_app.sh 
+update_app.sh
+
+# Database management scripts
+backup_db.sh
+restore_db.sh
+safe_restart.sh
+setup_automated_backups.sh
+
+# Generated HTML
+mnist_samples.html 
