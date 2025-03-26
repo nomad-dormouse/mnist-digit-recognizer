@@ -9,7 +9,7 @@ DB_PASSWORD="postgres"
 DB_HOST="localhost"
 DB_PORT="5432"
 LIMIT=20  # Default number of records to show
-MODE="web-app"  # Default mode: web-app, local, or container
+MODE="container"  # Default mode: container or local
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -24,38 +24,19 @@ show_help() {
     echo -e "  ./scripts/view_db.sh [options]"
     echo -e ""
     echo -e "${YELLOW}Options:${NC}"
-    echo -e "  -l, --local         View local database directly"
-    echo -e "  -c, --container     View container database directly"
-    echo -e "  -w, --web-app       View database as the web app would (default)"
+    echo -e "  -l, --local         View local database (like local web app)"
+    echo -e "  -c, --container     View container database (like server web app) (default)"
     echo -e "  -n, --limit=NUMBER  Limit the number of records to show (default: 20)"
     echo -e "  -a, --all           Show all records"
     echo -e "  -h, --help          Show this help message"
     echo -e ""
     echo -e "${YELLOW}Examples:${NC}"
-    echo -e "  ./scripts/view_db.sh                # View web app database (20 records)"
-    echo -e "  ./scripts/view_db.sh -l             # View local database directly (20 records)"
-    echo -e "  ./scripts/view_db.sh -c             # View container database directly (20 records)"
+    echo -e "  ./scripts/view_db.sh                # View container database (20 records)"
+    echo -e "  ./scripts/view_db.sh -l             # View local database (20 records)"
+    echo -e "  ./scripts/view_db.sh -n 50          # View container database (50 records)"
     echo -e "  ./scripts/view_db.sh -l -n 50       # View local database (50 records)"
-    echo -e "  ./scripts/view_db.sh --all          # View all records in web app database"
+    echo -e "  ./scripts/view_db.sh --all          # View all container database records"
     exit 0
-}
-
-# Detect if we're running on the server
-is_server() {
-    # Check if this script is running on a server environment
-    # If hostname is localhost or contains 192.168 or domain has 'local', it's likely local
-    hostname=$(hostname)
-    if [[ "$hostname" == "localhost" || "$hostname" =~ "192.168" || "$hostname" =~ ".local" ]]; then
-        return 1  # Not server
-    else
-        # Check if we're in a root-owned directory path that suggests server
-        current_path=$(pwd)
-        if [[ "$current_path" == "/root/"* ]]; then
-            return 0  # Is server
-        fi
-    fi
-    # Default to local environment
-    return 1
 }
 
 # Parse command line arguments
@@ -63,7 +44,6 @@ while [[ "$#" -gt 0 ]]; do
     case $1 in
         -l|--local) MODE="local" ;;
         -c|--container) MODE="container" ;;
-        -w|--web-app) MODE="web-app" ;;
         -n|--limit) LIMIT="$2"; shift ;;
         --limit=*) LIMIT="${1#*=}" ;;
         -a|--all) LIMIT="ALL" ;;
@@ -76,8 +56,8 @@ done
 # Set mode-specific parameters
 if [ "$MODE" = "local" ]; then
     # Local database settings
+    MODE_DESC="local (like local web app)"
     DB_USER=$(whoami)  # Use current user for local PostgreSQL
-    MODE_DESC="local"
     
     # Check if psql is available
     if ! command -v psql &> /dev/null; then
@@ -101,80 +81,33 @@ if [ "$MODE" = "local" ]; then
         echo -e "${RED}Try running 'psql -d ${DB_NAME}' manually to check the connection.${NC}"
         exit 1
     fi
-elif [ "$MODE" = "container" ]; then
-    # Direct container database mode
-    MODE_DESC="container"
+else
+    # Container database mode (default)
+    MODE_DESC="container (like server web app)"
     
     # Check if Docker is available
     if ! command -v docker &> /dev/null; then
         echo -e "${RED}Error: Docker is not installed or not in PATH!${NC}"
+        echo -e "${RED}Use --local to view the local database instead.${NC}"
         exit 1
     fi
     
     # Check if the db container is running
     if ! docker ps | grep -q ${DB_CONTAINER_NAME}; then
         echo -e "${RED}Error: Database container ${DB_CONTAINER_NAME} is not running!${NC}"
+        echo -e "${RED}Use --local to view the local database instead.${NC}"
         exit 1
     fi
     
-    # Define the query execution function for direct container mode
+    # Define the query execution function for container mode
     execute_query() {
         docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "$1"
     }
     
-    # Define the value query function for direct container mode
+    # Define the value query function for container mode
     query_value() {
         docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -tAc "$1"
     }
-else
-    # Web app database mode - behavior differs between local and server
-    if is_server; then
-        # On server, web app uses containerized database
-        MODE_DESC="web app on server (using container database)"
-        
-        # Check if Docker is available
-        if ! command -v docker &> /dev/null; then
-            echo -e "${RED}Error: Docker is not installed or not in PATH!${NC}"
-            exit 1
-        fi
-        
-        # Check if the db container is running
-        if ! docker ps | grep -q ${DB_CONTAINER_NAME}; then
-            echo -e "${RED}Error: Database container ${DB_CONTAINER_NAME} is not running!${NC}"
-            exit 1
-        fi
-        
-        # Define the query execution function for container mode
-        execute_query() {
-            docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "$1"
-        }
-        
-        # Define the value query function for container mode
-        query_value() {
-            docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -tAc "$1"
-        }
-    else
-        # On local machine, web app uses local database via fallback mechanism
-        MODE_DESC="web app on local (using local database)"
-        DB_USER=$(whoami)
-        
-        # Define the query execution function for local mode since that's what the app uses locally
-        execute_query() {
-            psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -c "$1"
-        }
-        
-        # Define the value query function for local mode
-        query_value() {
-            psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -tAc "$1"
-        }
-        
-        # Check if the database is accessible
-        if ! psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -c "SELECT 1" &> /dev/null; then
-            echo -e "${RED}Error: Cannot connect to the local database! Check your PostgreSQL service.${NC}"
-            echo -e "${RED}Try running 'psql -d ${DB_NAME}' manually to check the connection.${NC}"
-            exit 1
-        fi
-    fi
 fi
 
 echo -e "${YELLOW}Viewing ${MODE_DESC} database content (limit: $LIMIT)...${NC}"
@@ -295,29 +228,22 @@ if [ "$LABELED_RECORDS" -gt 5 ]; then
 fi
 
 echo -e "\n${GREEN}Usage Tips:${NC}"
-echo -e "${GREEN}* View as web app would: ./scripts/view_db.sh [--limit=N|--all]${NC}"
-echo -e "${GREEN}* View local database: ./scripts/view_db.sh --local [--limit=N|--all]${NC}"
-echo -e "${GREEN}* View container database: ./scripts/view_db.sh --container [--limit=N|--all]${NC}"
+echo -e "${GREEN}* View container database (server): ./scripts/view_db.sh ${NC}"
+echo -e "${GREEN}* View local database: ./scripts/view_db.sh --local${NC}"
+echo -e "${GREEN}* Limit results: ./scripts/view_db.sh [--local] --limit=N${NC}"
+echo -e "${GREEN}* View all records: ./scripts/view_db.sh [--local] --all${NC}"
 echo -e "${GREEN}* For help: ./scripts/view_db.sh --help${NC}"
 
 # Display connection mode in summary
 echo -e "\n${YELLOW}Connection Summary:${NC}"
 if [ "$MODE" = "local" ]; then
     echo -e "${GREEN}Connected to local database as user '${DB_USER}'${NC}"
-elif [ "$MODE" = "container" ]; then
-    echo -e "${GREEN}Connected directly to container database '${DB_CONTAINER_NAME}' as user '${DB_USER}'${NC}"
+    echo -e "${GREEN}This is the same database your web app uses when running locally${NC}"
 else
-    # Web app mode
-    if [[ "$MODE_DESC" == *"server"* ]]; then
-        echo -e "${GREEN}Connected to container database as the web app would on the server${NC}"
-        echo -e "${GREEN}Connection details: container=${DB_CONTAINER_NAME}, user=${DB_USER}, database=${DB_NAME}${NC}"
-    else
-        echo -e "${GREEN}Connected to local database as the web app would on your local machine${NC}"
-        echo -e "${GREEN}Note: When running locally, the web app falls back to the local database${NC}"
-        echo -e "${GREEN}      But when running on the server, it uses the container database instead${NC}"
-    fi
+    echo -e "${GREEN}Connected to container database as user '${DB_USER}'${NC}"
+    echo -e "${GREEN}This is the same database your web app uses when running on the server${NC}"
 fi
 
 # Remote connection tip
 echo -e "\n${YELLOW}Want to connect to the remote server?${NC}"
-echo -e "${GREEN}ssh root@37.27.197.79 \"cd /root/mnist-digit-recognizer && ./view_db.sh\"${NC}" 
+echo -e "${GREEN}ssh root@37.27.197.79 \"cd /root/mnist-digit-recognizer && ./scripts/view_db.sh\"${NC}" 
