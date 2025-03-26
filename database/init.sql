@@ -1,10 +1,15 @@
+-- Create database if it doesn't exist
 CREATE DATABASE mnist_db;
+
+-- Connect to the database
 \c mnist_db;
 
-CREATE TABLE IF NOT EXISTS predictions (
+-- Create predictions table
+DROP TABLE IF EXISTS predictions;
+CREATE TABLE predictions (
     id SERIAL PRIMARY KEY,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    predicted_digit INTEGER,
+    predicted_digit INTEGER NOT NULL,
     true_label INTEGER,
-    confidence FLOAT
+    confidence FLOAT NOT NULL
 ); 
