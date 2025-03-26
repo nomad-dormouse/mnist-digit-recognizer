@@ -3,6 +3,8 @@ import torch
 import torchvision
 import plotly.graph_objects as go
 import numpy as np
+import webbrowser
+import os
 from torchvision import datasets, transforms
 
 # Load MNIST dataset
@@ -135,13 +137,23 @@ html_content += """
 </html>
 """
 
+# File path
+output_file = "mnist_samples_clear_labels.html"
+
 # Write to HTML file
-with open("mnist_samples_clear_labels.html", "w") as f:
+with open(output_file, "w") as f:
     f.write(html_content)
+
+# Get the absolute file path
+file_path = os.path.abspath(output_file)
+
+# Open the HTML file in the default web browser
+print(f"Opening {output_file} in your default browser...")
+webbrowser.open('file://' + file_path)
 
 print("MNIST dataset visualization complete!")
 print("A random sample of 25 images has been displayed with Plotly.")
-print("The visualization has been saved to 'mnist_samples_clear_labels.html'")
+print(f"The visualization has been saved to '{output_file}'")
 
 # Display dataset statistics
 print("\nMNIST Dataset Information:")

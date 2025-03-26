@@ -4,6 +4,8 @@ import torchvision
 import plotly.graph_objects as go
 import plotly.subplots as sp
 import numpy as np
+import webbrowser
+import os
 from torchvision import datasets, transforms
 
 # Load MNIST dataset
@@ -61,13 +63,25 @@ for i in range(25):
         f'xaxis{i+1}_title_font': {'size': 16, 'color': 'blue'},
     })
 
+# File path
+output_file = "mnist_samples_plotly.html"
+
 # Show the figure
-fig.write_html("mnist_samples_plotly.html")
-fig.show()
+fig.write_html(output_file)
+
+# Get the absolute file path
+file_path = os.path.abspath(output_file)
+
+# Open the HTML file in the default web browser
+print(f"Opening {output_file} in your default browser...")
+webbrowser.open('file://' + file_path)
+
+# Don't show the figure in-line since we're opening it in the browser
+# fig.show()
 
 print("MNIST dataset visualization complete!")
 print("A random sample of 25 images has been displayed with Plotly.")
-print("The visualization has been saved to 'mnist_samples_plotly.html'")
+print(f"The visualization has been saved to '{output_file}'")
 
 # Display dataset statistics
 print("\nMNIST Dataset Information:")
