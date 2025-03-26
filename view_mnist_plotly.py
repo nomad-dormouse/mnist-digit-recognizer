@@ -20,11 +20,13 @@ fig = sp.make_subplots(rows=5, cols=5,
                       subplot_titles=[f"" for _ in range(25)])
 
 # Create a 5x5 grid of images
+digit_labels = []  # Store labels for the title
 for i in range(5):
     for j in range(5):
         # Get a random image
         idx = np.random.randint(0, len(mnist_train))
         img, label = mnist_train[idx]
+        digit_labels.append(label)
         
         # Convert tensor to numpy array
         img_array = img.numpy()[0]
@@ -39,26 +41,25 @@ for i in range(5):
             ),
             row=i+1, col=j+1
         )
-        
-        # Add annotation for the label
-        fig.add_annotation(
-            x=0.5, y=1.05,
-            text=f"Label: {label}",
-            xref=f"x{i*5+j+1}", yref=f"y{i*5+j+1}",
-            showarrow=False
-        )
 
-# Update the layout
+# Update the layout and axes
 fig.update_layout(
     title_text="MNIST Dataset Sample Images",
     height=800,
-    width=800,
+    width=1000,
     showlegend=False,
 )
 
-# Update axes to remove ticks and labels
-fig.update_xaxes(showticklabels=False, showgrid=False, zeroline=False)
-fig.update_yaxes(showticklabels=False, showgrid=False, zeroline=False)
+# Update axes to remove ticks and labels but add clear digit labels
+for i in range(25):
+    fig.update_xaxes(showticklabels=False, showgrid=False, zeroline=False, row=i//5+1, col=i%5+1)
+    fig.update_yaxes(showticklabels=False, showgrid=False, zeroline=False, row=i//5+1, col=i%5+1)
+    
+    # Add clearly visible title for each subplot
+    fig.update_layout(**{
+        f'xaxis{i+1}_title': f'Label: {digit_labels[i]}',
+        f'xaxis{i+1}_title_font': {'size': 16, 'color': 'blue'},
+    })
 
 # Show the figure
 fig.write_html("mnist_samples_plotly.html")
