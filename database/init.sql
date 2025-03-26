@@ -1,10 +1,4 @@
--- Create database if it doesn't exist
-CREATE DATABASE mnist_db;
-
--- Connect to the database
-\c mnist_db;
-
--- Create predictions table
+-- Create predictions table if it doesn't exist
 DROP TABLE IF EXISTS predictions;
 CREATE TABLE predictions (
     id SERIAL PRIMARY KEY,
