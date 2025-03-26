@@ -23,13 +23,13 @@ show_help() {
     echo -e "  ./scripts/view_db.sh [options]"
     echo -e ""
     echo -e "${YELLOW}Options:${NC}"
-    echo -e "  -l, --local         View local database (default: docker container database if available)"
+    echo -e "  -l, --local         View local database (default: docker container database)"
     echo -e "  -n, --limit=NUMBER  Limit the number of records to show (default: 20)"
     echo -e "  -a, --all           Show all records"
     echo -e "  -h, --help          Show this help message"
     echo -e ""
     echo -e "${YELLOW}Examples:${NC}"
-    echo -e "  ./scripts/view_db.sh                # View container database (or local if Docker not available)"
+    echo -e "  ./scripts/view_db.sh                # View container database (20 records)"
     echo -e "  ./scripts/view_db.sh -l             # View local database (20 records)"
     echo -e "  ./scripts/view_db.sh --local -n 50  # View local database (50 records)"
     echo -e "  ./scripts/view_db.sh --all          # View all container database records"
@@ -49,20 +49,6 @@ while [[ "$#" -gt 0 ]]; do
     esac
     shift
 done
-
-# Check if Docker is available, if not and LOCAL_MODE is false, switch to local mode
-if [ "$LOCAL_MODE" = false ]; then
-    if ! command -v docker &> /dev/null; then
-        echo -e "${YELLOW}Docker not found. Switching to local database mode.${NC}"
-        LOCAL_MODE=true
-    else
-        # Check if the container is running
-        if ! docker ps | grep -q ${CONTAINER_NAME}; then
-            echo -e "${YELLOW}Database container ${CONTAINER_NAME} is not running. Switching to local database mode.${NC}"
-            LOCAL_MODE=true
-        fi
-    fi
-fi
 
 # Set mode-specific parameters
 if [ "$LOCAL_MODE" = true ]; then
@@ -95,6 +81,20 @@ if [ "$LOCAL_MODE" = true ]; then
 else
     # Docker container mode
     MODE_DESC="container"
+    
+    # Check if Docker is available
+    if ! command -v docker &> /dev/null; then
+        echo -e "${RED}Error: Docker is not installed or not in PATH!${NC}"
+        echo -e "${RED}Use --local to view the local database instead.${NC}"
+        exit 1
+    fi
+    
+    # Check if the container is running
+    if ! docker ps | grep -q ${CONTAINER_NAME}; then
+        echo -e "${RED}Error: Database container ${CONTAINER_NAME} is not running!${NC}"
+        echo -e "${RED}Use --local to view the local database instead.${NC}"
+        exit 1
+    fi
     
     # Define the query execution function for container mode
     execute_query() {
