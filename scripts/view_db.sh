@@ -1,171 +1,116 @@
 #!/bin/bash
 
 # Default configuration
+LIMIT=20  # Default number of records to show
+MODE="container"  # Default mode: container or local
+
+# Remote server settings
 REMOTE_USER="root"
-REMOTE_HOST="37.27.197.79"  # Hetzner server IP
+REMOTE_HOST="37.27.197.79"
 REMOTE_DIR="/root/mnist-digit-recognizer"
 SSH_KEY="~/.ssh/hatzner_key"
 WEB_CONTAINER_NAME="mnist-digit-recognizer-web-1"
 DB_CONTAINER_NAME="mnist-digit-recognizer-db-1" 
+
+# Database settings
 DB_NAME="mnist_db"
 DB_USER="postgres"
 DB_PASSWORD="postgres"
 DB_HOST="localhost"
 DB_PORT="5432"
-LIMIT=20  # Default number of records to show
-MODE="container"  # Default mode: container or local
 
-# Colors for output
+# Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Function to display help
-show_help() {
-    echo -e "${YELLOW}Usage:${NC}"
-    echo -e "  ./scripts/view_db.sh [options]"
-    echo -e ""
-    echo -e "${YELLOW}Options:${NC}"
-    echo -e "  -l, --local         View local database (like local web app)"
-    echo -e "  -c, --container     View server container database (default)"
-    echo -e "  -n, --limit=NUMBER  Limit the number of records to show (default: 20)"
-    echo -e "  -a, --all           Show all records"
-    echo -e "  -h, --help          Show this help message"
-    echo -e ""
-    echo -e "${YELLOW}Examples:${NC}"
-    echo -e "  ./scripts/view_db.sh                # View server container database (20 records)"
-    echo -e "  ./scripts/view_db.sh -l             # View local database (20 records)"
-    echo -e "  ./scripts/view_db.sh -n 50          # View server container database (50 records)"
-    echo -e "  ./scripts/view_db.sh -l -n 50       # View local database (50 records)"
-    echo -e "  ./scripts/view_db.sh --all          # View all server container database records"
-    exit 0
-}
-
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         -l|--local) MODE="local" ;;
-        -c|--container) MODE="container" ;;
         -n|--limit) LIMIT="$2"; shift ;;
         --limit=*) LIMIT="${1#*=}" ;;
         -a|--all) LIMIT="ALL" ;;
-        -h|--help) show_help ;;
-        *) echo -e "${RED}Unknown parameter: $1${NC}"; show_help ;;
+        -h|--help) 
+            echo -e "${YELLOW}Usage:${NC}"
+            echo -e "  ./scripts/view_db.sh [options]"
+            echo -e "\n${YELLOW}Options:${NC}"
+            echo -e "  -l, --local         View local database (default: server container)"
+            echo -e "  -n, --limit=NUMBER  Limit the number of records to show (default: 20)"
+            echo -e "  -a, --all           Show all records"
+            echo -e "  -h, --help          Show this help message"
+            echo -e "\n${YELLOW}Examples:${NC}"
+            echo -e "  ./scripts/view_db.sh                # View server container database (20 records)"
+            echo -e "  ./scripts/view_db.sh -l             # View local database (20 records)"
+            echo -e "  ./scripts/view_db.sh -n 50          # View server container database (50 records)"
+            exit 0 
+            ;;
+        *) echo -e "${RED}Unknown parameter: $1${NC}"; exit 1 ;;
     esac
     shift
 done
 
-# Set mode-specific parameters
+# Configure database connection based on mode
 if [ "$MODE" = "local" ]; then
-    # Local database settings
-    MODE_DESC="local (like local web app)"
-    DB_USER=$(whoami)  # Use current user for local PostgreSQL
+    MODE_DESC="local database"
+    DB_USER=$(whoami)
     
-    # Check if psql is available
-    if ! command -v psql &> /dev/null; then
-        echo -e "${RED}Error: PostgreSQL client (psql) is not installed or not in PATH!${NC}"
-        exit 1
-    fi
+    # Define query functions for local mode
+    execute_query() { psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -c "$1"; }
+    query_value() { psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -tAc "$1"; }
     
-    # Define the query execution function for local mode
-    execute_query() {
-        psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -c "$1"
-    }
-    
-    # Define the value query function for local mode
-    query_value() {
-        psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -tAc "$1"
-    }
-    
-    # Check if the database is accessible
+    # Check connection
     if ! psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -c "SELECT 1" &> /dev/null; then
-        echo -e "${RED}Error: Cannot connect to the local database! Check your PostgreSQL service.${NC}"
-        echo -e "${RED}Try running 'psql -d ${DB_NAME}' manually to check the connection.${NC}"
+        echo -e "${RED}Error: Cannot connect to the local database!${NC}"
         exit 1
     fi
 else
-    # Container database mode (default) - connect to server via SSH
-    MODE_DESC="server container (remote)"
+    MODE_DESC="server container database"
     
-    # Check if SSH is available
-    if ! command -v ssh &> /dev/null; then
-        echo -e "${RED}Error: SSH is not installed or not in PATH!${NC}"
-        echo -e "${RED}Use --local to view the local database instead.${NC}"
-        exit 1
-    fi
-    
-    # Define the query execution function for remote container mode
+    # Define query functions for remote container mode
     execute_query() {
-        ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c \"$1\""
+        ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} "docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c \"$1\""
     }
-    
-    # Define the value query function for remote container mode
     query_value() {
-        ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -tAc \"$1\""
+        ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} "docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -tAc \"$1\""
     }
     
-    # Check if we can connect to the server
-    if ! ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} "echo Connected" &> /dev/null; then
-        echo -e "${RED}Error: Cannot connect to the remote server! Check your SSH configuration.${NC}"
-        echo -e "${RED}Use --local to view the local database instead.${NC}"
-        exit 1
-    fi
-    
-    # Check if the container is running on the server
+    # Check connection
     if ! ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} "docker ps | grep ${DB_CONTAINER_NAME}" &> /dev/null; then
-        echo -e "${RED}Error: Database container ${DB_CONTAINER_NAME} is not running on the server!${NC}"
-        echo -e "${RED}Use --local to view the local database instead.${NC}"
+        echo -e "${RED}Error: Cannot connect to database container on server!${NC}"
         exit 1
     fi
 fi
 
-echo -e "${YELLOW}Viewing ${MODE_DESC} database content (limit: $LIMIT)...${NC}"
+echo -e "${YELLOW}Viewing ${MODE_DESC} (limit: $LIMIT)...${NC}"
 
-# Count total records
+# Get basic statistics
 TOTAL_RECORDS=$(query_value "SELECT COUNT(*) FROM predictions;")
-echo -e "${GREEN}Total records in database: ${TOTAL_RECORDS}${NC}"
-
-# Count records with true labels
 LABELED_RECORDS=$(query_value "SELECT COUNT(*) FROM predictions WHERE true_label IS NOT NULL;")
-echo -e "${GREEN}Records with true labels: ${LABELED_RECORDS}${NC}"
-
-# Count correct predictions
 CORRECT_PREDICTIONS=$(query_value "SELECT COUNT(*) FROM predictions WHERE predicted_digit = true_label;")
-echo -e "${GREEN}Correct predictions: ${CORRECT_PREDICTIONS}${NC}"
 
-# Calculate accuracy
-if [ "$LABELED_RECORDS" != "0" ]; then
-    # Check if bc is available
-    if command -v bc &> /dev/null; then
-        ACCURACY=$(echo "scale=2; ($CORRECT_PREDICTIONS / $LABELED_RECORDS) * 100" | bc)
-        echo -e "${BLUE}Overall accuracy: ${ACCURACY}%${NC}"
-    else
-        echo -e "${RED}Cannot calculate accuracy: 'bc' command not found${NC}"
-    fi
-else
-    echo -e "${RED}Cannot calculate accuracy: No records with true labels found${NC}"
+# Display basic statistics
+echo -e "${GREEN}Total records: ${TOTAL_RECORDS} | Labeled records: ${LABELED_RECORDS} | Correct predictions: ${CORRECT_PREDICTIONS}${NC}"
+
+# Calculate and display accuracy
+if [ "$LABELED_RECORDS" != "0" ] && command -v bc &> /dev/null; then
+    ACCURACY=$(echo "scale=2; ($CORRECT_PREDICTIONS / $LABELED_RECORDS) * 100" | bc)
+    echo -e "${BLUE}Overall accuracy: ${ACCURACY}%${NC}"
 fi
 
-# Execute query to get records
+# Display recent predictions
 echo -e "\n${YELLOW}Recent predictions:${NC}"
-echo -e "${GREEN}ID | TIMESTAMP | PREDICTED_DIGIT | TRUE_LABEL | CONFIDENCE${NC}"
-echo -e "${GREEN}--------------------------------------------------${NC}"
-
 execute_query "
     SELECT 
-        id, 
-        timestamp, 
-        predicted_digit, 
-        true_label, 
-        confidence 
+        id, timestamp, predicted_digit, true_label, confidence 
     FROM predictions 
     ORDER BY timestamp DESC 
     LIMIT $LIMIT;"
 
-echo -e "\n${YELLOW}Statistics:${NC}"
-echo -e "${GREEN}Predictions by digit:${NC}"
+# Display digit statistics
+echo -e "\n${YELLOW}Predictions by digit:${NC}"
 execute_query "
     SELECT 
         predicted_digit, 
@@ -175,7 +120,7 @@ execute_query "
     GROUP BY predicted_digit 
     ORDER BY predicted_digit;"
 
-# Calculate accuracy by digit
+# Display accuracy by digit
 echo -e "\n${YELLOW}Accuracy by digit:${NC}"
 execute_query "
     WITH stats AS (
@@ -191,45 +136,18 @@ execute_query "
         true_label as digit,
         total as attempts,
         correct as correct_predictions,
-        (correct::float / total * 100)::numeric(10,2) as accuracy_pct,
-        (SELECT AVG(confidence)::numeric(10,2) * 100 
-         FROM predictions 
-         WHERE true_label = stats.true_label 
-           AND predicted_digit = true_label) as avg_confidence_correct
+        (correct::float / total * 100)::numeric(10,2) as accuracy_pct
     FROM stats
     ORDER BY true_label;"
 
-# Show confusion matrix if there are enough records
+# Show top misclassifications if we have labeled data
 if [ "$LABELED_RECORDS" -gt 5 ]; then
-    echo -e "\n${YELLOW}Confusion matrix (true labels vs predictions):${NC}"
-    execute_query "
-        WITH matrix AS (
-            SELECT 
-                true_label,
-                predicted_digit,
-                COUNT(*) as count
-            FROM predictions
-            WHERE true_label IS NOT NULL
-            GROUP BY true_label, predicted_digit
-        )
-        SELECT 
-            'True label: ' || true_label as true_label,
-            json_object_agg(
-                'Predicted as ' || predicted_digit, 
-                count
-            ) as predictions
-        FROM matrix
-        GROUP BY true_label
-        ORDER BY true_label;"
-
-    # Show most common misclassifications
     echo -e "\n${YELLOW}Top misclassifications:${NC}"
     execute_query "
         SELECT 
             true_label as actual_digit,
             predicted_digit as predicted_as,
-            COUNT(*) as count,
-            AVG(confidence)::numeric(10,2) * 100 as avg_confidence_pct
+            COUNT(*) as count
         FROM predictions
         WHERE true_label IS NOT NULL
           AND true_label != predicted_digit
@@ -238,20 +156,5 @@ if [ "$LABELED_RECORDS" -gt 5 ]; then
         LIMIT 5;"
 fi
 
-# Display connection mode in summary
-echo -e "\n${YELLOW}Connection Summary:${NC}"
-if [ "$MODE" = "local" ]; then
-    echo -e "${GREEN}Connected to local database as user '${DB_USER}'${NC}"
-    echo -e "${GREEN}This is the same database your web app uses when running locally${NC}"
-else
-    echo -e "${GREEN}Connected to server database container '${DB_CONTAINER_NAME}' on ${REMOTE_HOST}${NC}"
-    echo -e "${GREEN}This is the same database your web app uses when running on the server${NC}"
-fi
-
-# Usage tips
-echo -e "\n${GREEN}Usage Tips:${NC}"
-echo -e "${GREEN}* View server container database: ./scripts/view_db.sh ${NC}"
-echo -e "${GREEN}* View local database: ./scripts/view_db.sh --local${NC}"
-echo -e "${GREEN}* Limit results: ./scripts/view_db.sh [--local] --limit=N${NC}"
-echo -e "${GREEN}* View all records: ./scripts/view_db.sh [--local] --all${NC}"
-echo -e "${GREEN}* For help: ./scripts/view_db.sh --help${NC}" 
+# Display connection info
+echo -e "\n${GREEN}Connected to ${MODE_DESC}${NC}" 
