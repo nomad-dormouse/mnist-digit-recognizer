@@ -6,6 +6,12 @@ A full-stack machine learning application that allows users to draw digits and g
 
 **GitHub Repository**: [https://github.com/nomad-dormouse/mnist-digit-recognizer](https://github.com/nomad-dormouse/mnist-digit-recognizer)
 
+## AI Development Acknowledgment
+
+This project was developed with the assistance of AI tools, specifically:
+- [Cursor](https://cursor.sh/) - An AI-powered code editor that provided intelligent code suggestions and pair programming capabilities
+- The development process involved AI-assisted coding, debugging, and documentation generation, while maintaining human oversight and validation for all critical decisions and implementations
+
 ## Features
 
 - Deep learning model for handwritten digit classification (PyTorch)
