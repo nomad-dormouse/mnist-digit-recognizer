@@ -1,4 +1,30 @@
 #!/usr/bin/env python3
+"""
+================================================================================
+MNIST DATASET VISUALIZATION TOOL
+================================================================================
+This script visualizes a random selection of MNIST handwritten digit samples
+in a 5x5 grid using Plotly and saves the result as an interactive HTML file.
+
+Purpose:
+    - View actual MNIST dataset examples to understand the training data
+    - Generate sample digit images for testing or documentation
+    - See the variety of handwriting styles in the dataset
+
+Usage:
+    ./scripts/local/view_mnist_samples.py
+
+Requirements:
+    - PyTorch and torchvision (for loading the MNIST dataset)
+    - Plotly (for creating the visualization)
+    - Internet connection (first run only, to download the dataset)
+
+Output:
+    - Interactive HTML file with a 5x5 grid of MNIST digit images
+    - The file will open automatically in your default web browser
+    - Each run generates a new random selection of images
+================================================================================
+"""
 import os
 import webbrowser
 import numpy as np
