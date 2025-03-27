@@ -1,10 +1,20 @@
 #!/bin/bash
 
+# ================================================================================
+# LOCAL DATABASE VIEWER
+# ================================================================================
+# This script views the local Docker containerized database.
+# 
+# Usage:
+#   ./scripts/local/view_local_db.sh           # Default 20 records
+#   ./scripts/local/view_local_db.sh 50        # Show 50 records
+#   ./scripts/local/view_local_db.sh all       # Show all records
+# ================================================================================
+
 # Database settings 
+DB_CONTAINER="mnist-digit-recognizer-db-1"
 DB_NAME="mnist_db"
 DB_USER="postgres"
-DB_PASSWORD="postgres"
-DB_HOST="db"
 
 # Colors
 GREEN='\033[0;32m'
@@ -23,10 +33,19 @@ fi
 
 echo -e "${YELLOW}Viewing local database records (limit: $LIMIT)...${NC}"
 
-# Run queries in the database container
-TOTAL_RECORDS=$(docker exec mnist-digit-recognizer-db-1 psql -U ${DB_USER} -d ${DB_NAME} -tAc "SELECT COUNT(*) FROM predictions;")
-LABELED_RECORDS=$(docker exec mnist-digit-recognizer-db-1 psql -U ${DB_USER} -d ${DB_NAME} -tAc "SELECT COUNT(*) FROM predictions WHERE true_label IS NOT NULL;")
-CORRECT_PREDICTIONS=$(docker exec mnist-digit-recognizer-db-1 psql -U ${DB_USER} -d ${DB_NAME} -tAc "SELECT COUNT(*) FROM predictions WHERE predicted_digit = true_label;")
+# Query functions
+docker_db_query() {
+    docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -c "$1"
+}
+
+docker_db_value() {
+    docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -tAc "$1"
+}
+
+# Get statistics
+TOTAL_RECORDS=$(docker_db_value "SELECT COUNT(*) FROM predictions;")
+LABELED_RECORDS=$(docker_db_value "SELECT COUNT(*) FROM predictions WHERE true_label IS NOT NULL;")
+CORRECT_PREDICTIONS=$(docker_db_value "SELECT COUNT(*) FROM predictions WHERE predicted_digit = true_label;")
 
 # Display basic statistics
 echo -e "${GREEN}Total records: ${TOTAL_RECORDS} | Labeled records: ${LABELED_RECORDS} | Correct predictions: ${CORRECT_PREDICTIONS}${NC}"
@@ -39,7 +58,7 @@ fi
 
 # Display recent predictions
 echo -e "\n${YELLOW}Recent predictions:${NC}"
-docker exec mnist-digit-recognizer-db-1 psql -U ${DB_USER} -d ${DB_NAME} -c "
+docker_db_query "
     SELECT 
         id, timestamp, predicted_digit, true_label, confidence 
     FROM predictions 
@@ -48,7 +67,7 @@ docker exec mnist-digit-recognizer-db-1 psql -U ${DB_USER} -d ${DB_NAME} -c "
 
 # Display digit statistics
 echo -e "\n${YELLOW}Predictions by digit:${NC}"
-docker exec mnist-digit-recognizer-db-1 psql -U ${DB_USER} -d ${DB_NAME} -c "
+docker_db_query "
     SELECT 
         predicted_digit, 
         COUNT(*) as count,
@@ -60,7 +79,7 @@ docker exec mnist-digit-recognizer-db-1 psql -U ${DB_USER} -d ${DB_NAME} -c "
 # Display accuracy by digit if we have labeled data
 if [ "$LABELED_RECORDS" -gt 0 ]; then
     echo -e "\n${YELLOW}Accuracy by digit:${NC}"
-    docker exec mnist-digit-recognizer-db-1 psql -U ${DB_USER} -d ${DB_NAME} -c "
+    docker_db_query "
         WITH stats AS (
             SELECT 
                 true_label,
