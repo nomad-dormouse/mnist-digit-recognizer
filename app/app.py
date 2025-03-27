@@ -15,8 +15,17 @@ from streamlit_drawable_canvas import st_canvas
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model.model import MNISTModel
 
-# Load environment variables
-load_dotenv()
+# Load environment variables - first try local/.env.local, then fall back to .env.production for production
+env_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'local', '.env.local')
+if os.path.exists(env_file_path):
+    load_dotenv(env_file_path)
+else:
+    # Use .env.production for production or fall back to default load_dotenv behavior
+    production_env = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env.production')
+    if os.path.exists(production_env):
+        load_dotenv(production_env)
+    else:
+        load_dotenv()
 
 # Database connection parameters
 DB_HOST = os.getenv('DB_HOST', 'localhost')
