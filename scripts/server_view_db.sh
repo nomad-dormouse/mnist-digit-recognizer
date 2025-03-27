@@ -1,10 +1,13 @@
 #!/bin/bash
 
-# Database settings 
+# Remote server settings
+REMOTE_USER="root"
+REMOTE_HOST="37.27.197.79"
+DB_CONTAINER="mnist-digit-recognizer-db-1"
+
+# Database settings
 DB_NAME="mnist_db"
 DB_USER="postgres"
-DB_PASSWORD="postgres"
-DB_HOST="db"
 
 # Colors
 GREEN='\033[0;32m'
@@ -21,12 +24,12 @@ elif [[ "$1" =~ ^[0-9]+$ ]]; then
     LIMIT="$1"
 fi
 
-echo -e "${YELLOW}Viewing database records (limit: $LIMIT)...${NC}"
+echo -e "${YELLOW}Viewing server database records (limit: $LIMIT)...${NC}"
 
-# Run queries in the database container
-TOTAL_RECORDS=$(docker exec mnist-digit-recognizer-db-1 psql -U ${DB_USER} -d ${DB_NAME} -tAc "SELECT COUNT(*) FROM predictions;")
-LABELED_RECORDS=$(docker exec mnist-digit-recognizer-db-1 psql -U ${DB_USER} -d ${DB_NAME} -tAc "SELECT COUNT(*) FROM predictions WHERE true_label IS NOT NULL;")
-CORRECT_PREDICTIONS=$(docker exec mnist-digit-recognizer-db-1 psql -U ${DB_USER} -d ${DB_NAME} -tAc "SELECT COUNT(*) FROM predictions WHERE predicted_digit = true_label;")
+# Run queries on remote server database container
+TOTAL_RECORDS=$(ssh ${REMOTE_USER}@${REMOTE_HOST} "docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -tAc \"SELECT COUNT(*) FROM predictions;\"")
+LABELED_RECORDS=$(ssh ${REMOTE_USER}@${REMOTE_HOST} "docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -tAc \"SELECT COUNT(*) FROM predictions WHERE true_label IS NOT NULL;\"")
+CORRECT_PREDICTIONS=$(ssh ${REMOTE_USER}@${REMOTE_HOST} "docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -tAc \"SELECT COUNT(*) FROM predictions WHERE predicted_digit = true_label;\"")
 
 # Display basic statistics
 echo -e "${GREEN}Total records: ${TOTAL_RECORDS} | Labeled records: ${LABELED_RECORDS} | Correct predictions: ${CORRECT_PREDICTIONS}${NC}"
@@ -39,28 +42,28 @@ fi
 
 # Display recent predictions
 echo -e "\n${YELLOW}Recent predictions:${NC}"
-docker exec mnist-digit-recognizer-db-1 psql -U ${DB_USER} -d ${DB_NAME} -c "
+ssh ${REMOTE_USER}@${REMOTE_HOST} "docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -c \"
     SELECT 
         id, timestamp, predicted_digit, true_label, confidence 
     FROM predictions 
     ORDER BY timestamp DESC 
-    LIMIT $LIMIT;"
+    LIMIT $LIMIT;\""
 
 # Display digit statistics
 echo -e "\n${YELLOW}Predictions by digit:${NC}"
-docker exec mnist-digit-recognizer-db-1 psql -U ${DB_USER} -d ${DB_NAME} -c "
+ssh ${REMOTE_USER}@${REMOTE_HOST} "docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -c \"
     SELECT 
         predicted_digit, 
         COUNT(*) as count,
         (AVG(confidence) * 100)::numeric(10,2) as avg_confidence_pct
     FROM predictions 
     GROUP BY predicted_digit 
-    ORDER BY predicted_digit;"
+    ORDER BY predicted_digit;\""
 
 # Display accuracy by digit if we have labeled data
 if [ "$LABELED_RECORDS" -gt 0 ]; then
     echo -e "\n${YELLOW}Accuracy by digit:${NC}"
-    docker exec mnist-digit-recognizer-db-1 psql -U ${DB_USER} -d ${DB_NAME} -c "
+    ssh ${REMOTE_USER}@${REMOTE_HOST} "docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -c \"
         WITH stats AS (
             SELECT 
                 true_label,
@@ -76,8 +79,8 @@ if [ "$LABELED_RECORDS" -gt 0 ]; then
             correct as correct_predictions,
             (correct::float / total * 100)::numeric(10,2) as accuracy_pct
         FROM stats
-        ORDER BY true_label;"
+        ORDER BY true_label;\""
 fi
 
-echo -e "\n${GREEN}Database query complete.${NC}"
-echo -e "To view more or fewer records, use: ./view_db.sh [limit|all]" 
+echo -e "\n${GREEN}Server database query complete.${NC}"
+echo -e "To view more or fewer records, use: ./server_view_db.sh [limit|all]" 
