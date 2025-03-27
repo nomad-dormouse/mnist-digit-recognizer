@@ -4,13 +4,9 @@ This directory contains scripts for managing the MNIST Digit Recognizer applicat
 
 ## Available Scripts
 
-- **deploy.sh**: Deploys the application to the server, sets up the environment, and starts the containers.
+- **deploy.sh**: Deploys the application to the server, sets up the environment, and starts the containers. Includes removing the PostgreSQL volume for clean initialization.
 - **server_setup.sh**: Initial server configuration script to install required dependencies and set up the environment.
-- **backup_db.sh**: Creates a backup of the PostgreSQL database.
-- **restore_db.sh**: Restores the PostgreSQL database from a backup.
-- **safe_restart.sh**: Safely restarts the application with database backup and recovery.
-- **setup_automated_backups.sh**: Sets up automated daily backups via cron jobs.
-- **view_db.sh**: Unified script to view and analyze database statistics from either the local database or the Docker container database.
+- **view_db.sh**: Displays database statistics and prediction history on the remote server.
 
 ## Usage Examples
 
@@ -19,42 +15,31 @@ This directory contains scripts for managing the MNIST Digit Recognizer applicat
 ./scripts/deploy.sh
 ```
 
-### Backup the database:
-```bash
-./scripts/backup_db.sh
-```
-
-### Set up automated backups:
-```bash
-./scripts/setup_automated_backups.sh
-```
-
-### Safely restart the application:
-```bash
-./scripts/safe_restart.sh
-```
-
 ### Initial server setup (run before first deployment):
 ```bash
 ./scripts/server_setup.sh
 ```
 
-### View database statistics:
+### View database statistics on the remote server:
 ```bash
-# View Docker container database (default)
-./scripts/view_db.sh
-
-# View local database
-./scripts/view_db.sh --local
+# Connect to remote server and view database
+ssh -i ~/.ssh/hatzner_key root@37.27.197.79 "cd /root/mnist-digit-recognizer && ./scripts/view_db.sh"
 
 # View with custom record limit
-./scripts/view_db.sh --limit=50
-./scripts/view_db.sh -l -n 50
+ssh -i ~/.ssh/hatzner_key root@37.27.197.79 "cd /root/mnist-digit-recognizer && ./scripts/view_db.sh 50"
 
 # View all records
-./scripts/view_db.sh --all
-./scripts/view_db.sh -l -a
+ssh -i ~/.ssh/hatzner_key root@37.27.197.79 "cd /root/mnist-digit-recognizer && ./scripts/view_db.sh all"
+```
 
-# Show help
-./scripts/view_db.sh --help
+## Local Development
+
+For local development tools, please see the `local/` directory in the project root:
+
+```bash
+# Run the application locally
+./local/run_locally.sh
+
+# View local database
+./local/view_local_db.sh
 ``` 
