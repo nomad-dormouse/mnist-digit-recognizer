@@ -81,4 +81,4 @@ fi
 
 echo -e "\n${GREEN}Local database query complete.${NC}"
 echo -e "To view more or fewer records, use: ./scripts/local/view_local_db.sh [limit|all]"
-echo -e "To view server database, use: ssh root@37.27.197.79 \"cd /root/mnist-digit-recognizer && ./scripts/server_view_db.sh\"" 
+echo -e "To view server database, use: ssh root@37.27.197.79 \"cd /root/mnist-digit-recognizer && ./scripts/view_db.sh\"" 
