@@ -6,12 +6,12 @@
 # This script is designed to run on the remote server.
 # 
 # To run from your local machine:
-#   ssh root@37.27.197.79 "cd /root/mnist-digit-recognizer && ./scripts/view_db.sh [limit|all]"
+#   ssh -i ~/.ssh/hatzner_key root@37.27.197.79 "cd /root/mnist-digit-recognizer && ./scripts/view_db.sh [limit|all]"
 #
 # Examples:
-#   ssh root@37.27.197.79 "cd /root/mnist-digit-recognizer && ./scripts/view_db.sh"        # Default 20 records
-#   ssh root@37.27.197.79 "cd /root/mnist-digit-recognizer && ./scripts/view_db.sh 50"     # Show 50 records
-#   ssh root@37.27.197.79 "cd /root/mnist-digit-recognizer && ./scripts/view_db.sh all"    # Show all records
+#   ssh -i ~/.ssh/hatzner_key root@37.27.197.79 "cd /root/mnist-digit-recognizer && ./scripts/view_db.sh"        # Default 20 records
+#   ssh -i ~/.ssh/hatzner_key root@37.27.197.79 "cd /root/mnist-digit-recognizer && ./scripts/view_db.sh 50"     # Show 50 records
+#   ssh -i ~/.ssh/hatzner_key root@37.27.197.79 "cd /root/mnist-digit-recognizer && ./scripts/view_db.sh all"    # Show all records
 # ================================================================================
 
 # Database settings
@@ -35,6 +35,16 @@ elif [[ "$1" =~ ^[0-9]+$ ]]; then
 fi
 
 echo -e "${YELLOW}Viewing database records (limit: $LIMIT)...${NC}"
+
+# Check if the database container is running
+echo -e "${YELLOW}Checking Docker container status...${NC}"
+if ! docker ps | grep -q ${DB_CONTAINER}; then
+    echo -e "${YELLOW}Database container not running. Showing all containers:${NC}"
+    docker ps
+    exit 1
+fi
+
+echo -e "${YELLOW}Database container found. Retrieving records...${NC}"
 
 # Run queries in the database container
 TOTAL_RECORDS=$(docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -tAc "SELECT COUNT(*) FROM predictions;")
