@@ -30,7 +30,9 @@ htmlcov/
 venv/
 ENV/
 env/
-.env
+# .env is tracked for production settings
+!.env
+.env.local
 .venv
 env.bak/
 venv.bak/
