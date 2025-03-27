@@ -35,19 +35,19 @@ This project is an end-to-end machine learning application that:
 .
 ├── app/                    # Streamlit web application
 ├── model/                  # PyTorch model and training code
-├── database/               # Database schemas and migrations
+├── database/               # Database schemas and tools
+│   ├── init.sql           # Database initialization script
+│   └── view_db.sh         # Database statistics viewer
 ├── docker/                 # Docker configuration files
+├── local/                  # Local development tools
+│   ├── run_locally.sh     # Local Docker development runner
+│   └── view_local_db.sh   # Local database viewer
+├── server/                 # Server management and deployment
+│   └── deploy.sh          # Deployment script
 ├── saved_models/           # Saved model weights
-├── scripts/                # Server management and deployment scripts
-│   ├── deploy.sh           # Deployment script
-│   ├── server_setup.sh     # Initial server configuration
-│   ├── backup_db.sh        # Database backup script
-│   ├── restore_db.sh       # Database restoration script
-│   ├── safe_restart.sh     # Safe application restart
-│   └── setup_automated_backups.sh # Setup automated backups
 ├── requirements.txt        # Python dependencies
 ├── docker-compose.yml      # Multi-container Docker setup
-└── .env.production         # Production environment variables
+└── .env                    # Production environment variables
 ```
 
 ## Local Development Setup
@@ -55,16 +55,14 @@ This project is an end-to-end machine learning application that:
 The easiest way to run the application locally is to use the provided script:
 
 ```bash
-./run_local.sh
+./local/run_locally.sh
 ```
 
 This script will:
-1. Create and activate a virtual environment if needed
-2. Install all required dependencies
-3. Set up the local PostgreSQL database
-4. Create the necessary tables
-5. Set up all environment variables
-6. Start the Streamlit application
+1. Start Docker containers for the app and database
+2. Initialize the database with proper schema
+3. Set up all environment variables
+4. Run the application in Docker containers
 
 Alternatively, if you want to set things up manually:
 
@@ -80,13 +78,13 @@ Alternatively, if you want to set things up manually:
    ```
 
 3. **Set up environment variables:**
-   Create a `.env` file with the following variables:
+   Create a `.env.local` file in the `local/` directory with the following variables:
    ```
    DB_HOST=localhost
    DB_PORT=5432
    DB_NAME=mnist_db
    DB_USER=postgres
-   DB_PASSWORD=your_password
+   DB_PASSWORD=postgres
    ```
 
 4. **Set up the PostgreSQL database:**
@@ -120,13 +118,13 @@ Alternatively, if you want to set things up manually:
 ## Deployment
 
 1. **Update the deployment script with your server information:**
-   Edit `scripts/deploy.sh` and update:
+   Edit `server/deploy.sh` and update:
    - `REMOTE_HOST` with your server IP
    - `REPO_URL` with your GitHub repository URL
 
 2. **Run the deployment script:**
    ```bash
-   ./scripts/deploy.sh
+   ./server/deploy.sh
    ```
 3. **Access the deployed application:**
    Open your browser and navigate to `http://your-server-ip:8501`
