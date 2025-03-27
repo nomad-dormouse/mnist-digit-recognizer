@@ -1,11 +1,21 @@
 #!/bin/bash
 
-# Remote server settings
-REMOTE_USER="root"
-REMOTE_HOST="37.27.197.79"
-DB_CONTAINER="mnist-digit-recognizer-db-1"
+# ================================================================================
+# SERVER DATABASE VIEWER
+# ================================================================================
+# This script is designed to run on the remote server.
+# 
+# To run from your local machine:
+#   ssh root@37.27.197.79 "cd /root/mnist-digit-recognizer && ./scripts/view_db.sh [limit|all]"
+#
+# Examples:
+#   ssh root@37.27.197.79 "cd /root/mnist-digit-recognizer && ./scripts/view_db.sh"        # Default 20 records
+#   ssh root@37.27.197.79 "cd /root/mnist-digit-recognizer && ./scripts/view_db.sh 50"     # Show 50 records
+#   ssh root@37.27.197.79 "cd /root/mnist-digit-recognizer && ./scripts/view_db.sh all"    # Show all records
+# ================================================================================
 
 # Database settings
+DB_CONTAINER="mnist-digit-recognizer-db-1"
 DB_NAME="mnist_db"
 DB_USER="postgres"
 
@@ -24,33 +34,9 @@ elif [[ "$1" =~ ^[0-9]+$ ]]; then
     LIMIT="$1"
 fi
 
-# Detect if running on server or locally
-IS_SERVER=false
-if [[ "$(hostname)" == *"localhost"* ]] || [[ "$(hostname)" == "server" ]] || [[ "$(hostname)" == "ip-"* ]]; then
-    IS_SERVER=true
-fi
+echo -e "${YELLOW}Viewing database records (limit: $LIMIT)...${NC}"
 
-# If running locally, execute on remote server
-if [ "$IS_SERVER" = false ]; then
-    echo -e "${YELLOW}Connecting to remote server...${NC}"
-    
-    # Forward arguments to the remote script
-    ARGS=""
-    if [ "$#" -gt 0 ]; then
-        ARGS="$@"
-    fi
-    
-    # Execute script on remote server and pass along the output
-    ssh ${REMOTE_USER}@${REMOTE_HOST} "cd /root/mnist-digit-recognizer && ./scripts/view_db.sh $ARGS"
-    
-    echo -e "\n${GREEN}Remote connection closed.${NC}"
-    echo -e "To view the local database, run: ./scripts/local/view_local_db.sh"
-    exit 0
-fi
-
-echo -e "${YELLOW}Viewing server database records (limit: $LIMIT)...${NC}"
-
-# Running directly on the server
+# Run queries in the database container
 TOTAL_RECORDS=$(docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -tAc "SELECT COUNT(*) FROM predictions;")
 LABELED_RECORDS=$(docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -tAc "SELECT COUNT(*) FROM predictions WHERE true_label IS NOT NULL;")
 CORRECT_PREDICTIONS=$(docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -tAc "SELECT COUNT(*) FROM predictions WHERE predicted_digit = true_label;")
@@ -106,6 +92,5 @@ if [ "$LABELED_RECORDS" -gt 0 ]; then
         ORDER BY true_label;"
 fi
 
-echo -e "\n${GREEN}Server database query complete.${NC}"
-echo -e "To view more or fewer records, use: ./scripts/view_db.sh [limit|all]"
-echo -e "To view local database, run: ./scripts/local/view_local_db.sh" 
+echo -e "\n${GREEN}Database query complete.${NC}"
+echo -e "To view more or fewer records, use: ./scripts/view_db.sh [limit|all]" 
