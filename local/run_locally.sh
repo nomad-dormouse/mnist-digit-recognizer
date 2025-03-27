@@ -6,7 +6,7 @@
 # This script runs the MNIST Digit Recognizer app locally using Docker.
 # 
 # Usage:
-#   ./scripts/local/run_locally.sh
+#   ./local/run_locally.sh
 #
 # Requirements:
 #   - Docker Desktop running
@@ -15,7 +15,7 @@
 #   - All components (app and database) run in Docker containers
 #   - Data persists between runs in a Docker volume
 #   - The web interface is available at http://localhost:8501
-#   - To view database contents, use: ./scripts/local/view_local_db.sh
+#   - To view database contents, use: ./local/view_local_db.sh
 # ================================================================================
 
 # Colors
