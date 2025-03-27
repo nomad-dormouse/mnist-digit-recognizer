@@ -46,6 +46,11 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
     # Build and start the containers
     echo -e "${YELLOW}Building and starting containers...${NC}"
     docker-compose down || true
+    
+    # Remove the PostgreSQL volume to ensure clean initialization
+    echo -e "${YELLOW}Removing PostgreSQL volume for clean initialization...${NC}"
+    docker volume rm mnist-digit-recognizer_postgres_data || true
+    
     docker-compose build --no-cache
     docker-compose up -d
 
