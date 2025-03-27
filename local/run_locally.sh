@@ -83,7 +83,7 @@ docker exec mnist-digit-recognizer-db-1 psql -U postgres -d mnist_db -c "
 
 # Build and start the web container
 echo -e "${YELLOW}Building and starting web container...${NC}"
-docker build -t mnist-app-local -f docker/Dockerfile.local .
+docker build -t mnist-app-local -f local/Dockerfile.local .
 docker run -d --name mnist-digit-recognizer-web-1 \
     --network mnist-network \
     -p 8501:8501 \
