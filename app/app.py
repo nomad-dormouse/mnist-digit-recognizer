@@ -31,21 +31,10 @@ is_running_locally = not os.environ.get('HOSTNAME', '').startswith('mnist-digit-
 # If running locally and DB_HOST is set to 'db', we need to use localhost instead
 if is_running_locally and DB_HOST == 'db':
     DB_HOST = 'localhost'
-    st.sidebar.warning("Running locally, using localhost to connect to database")
-
-# Sidebar connection info
-st.sidebar.title("Connection Info")
-st.sidebar.text(f"DB Host: {DB_HOST}")
-st.sidebar.text(f"DB Port: {DB_PORT}")
-st.sidebar.text(f"DB User: {DB_USER}")
-st.sidebar.text(f"DB Name: {DB_NAME}")
 
 def get_db_connection():
     """Connect to the database using environment variables."""
     try:
-        # Log connection attempts
-        st.sidebar.info(f"Attempting to connect to database at {DB_HOST}:{DB_PORT}")
-        
         conn = psycopg2.connect(
             host=DB_HOST,
             port=DB_PORT,
@@ -54,14 +43,10 @@ def get_db_connection():
             password=DB_PASSWORD,
             connect_timeout=10  # Increased timeout
         )
-        st.sidebar.success(f"Connected to database at {DB_HOST}:{DB_PORT}!")
         return conn
-    except psycopg2.Error as e:
-        st.sidebar.error(f"Database connection failed: {str(e)}")
-        
+    except psycopg2.Error:
         # When using Docker Compose, the service name 'db' should be used
         if DB_HOST != 'db' and 'docker' in os.environ.get('HOSTNAME', ''):
-            st.sidebar.warning("Trying 'db' as host name...")
             try:
                 conn = psycopg2.connect(
                     host='db',
@@ -71,14 +56,12 @@ def get_db_connection():
                     password=DB_PASSWORD,
                     connect_timeout=10
                 )
-                st.sidebar.success("Connected to database using 'db' as host!")
                 return conn
-            except psycopg2.Error as e2:
-                st.sidebar.error(f"Connection to 'db' failed: {str(e2)}")
+            except psycopg2.Error:
+                pass
         
         # Try Docker container connection
         if DB_HOST == 'localhost':
-            st.sidebar.warning("Trying Docker container...")
             try:
                 # Get container IP
                 import subprocess
@@ -89,7 +72,6 @@ def get_db_connection():
                 container_ip = result.stdout.strip()
                 
                 if container_ip:
-                    st.sidebar.info(f"Container IP: {container_ip}")
                     conn = psycopg2.connect(
                         host=container_ip,
                         port=DB_PORT,
@@ -98,10 +80,9 @@ def get_db_connection():
                         password=DB_PASSWORD,
                         connect_timeout=10
                     )
-                    st.sidebar.success("Connected via container IP!")
                     return conn
-            except Exception as container_e:
-                st.sidebar.error(f"Container connection failed: {str(container_e)}")
+            except Exception:
+                pass
         
         return None
 
@@ -122,8 +103,8 @@ def log_prediction(prediction, true_label, confidence):
         conn.commit()
         cur.close()
         conn.close()
-    except Exception as e:
-        st.error(f"Failed to log prediction: {str(e)}")
+    except Exception:
+        pass
 
 def get_prediction_history():
     try:
@@ -140,8 +121,7 @@ def get_prediction_history():
         df = pd.read_sql_query(query, conn)
         conn.close()
         return df
-    except Exception as e:
-        st.error(f"Failed to fetch history: {str(e)}")
+    except Exception:
         return pd.DataFrame()
 
 def load_model():
@@ -177,21 +157,28 @@ def preprocess_image(image):
 def main():
     st.title("Digit Recognizer", anchor=False)
     
+    # Add more space after the title
+    st.markdown("<br>", unsafe_allow_html=True)
+    
     # Initialize session state
     if 'prediction' not in st.session_state:
         st.session_state.prediction = None
         st.session_state.confidence = None
 
-    # Create a canvas for drawing
-    canvas_result = st_canvas(
-        stroke_width=20,
-        stroke_color='#FFFFFF',
-        background_color='#000000',
-        height=280,
-        width=280,
-        drawing_mode="freedraw",
-        key="canvas",
-    )
+    # Layout with two columns for drawing and result
+    col1, col2 = st.columns([1, 1])
+
+    # Create a canvas for drawing in the left column
+    with col1:
+        canvas_result = st_canvas(
+            stroke_width=20,
+            stroke_color='#FFFFFF',
+            background_color='#000000',
+            height=280,
+            width=280,
+            drawing_mode="freedraw",
+            key="canvas",
+        )
     
     # Initialize the model
     model = load_model()
@@ -199,9 +186,8 @@ def main():
     if model is None:
         st.stop()
 
-    col1, col2 = st.columns([2, 3])
-
-    with col1:
+    # Display prediction result and controls in the right column
+    with col2:
         if canvas_result.image_data is not None:
             # Convert the canvas to PIL Image
             image = Image.fromarray(canvas_result.image_data.astype('uint8'))
@@ -213,27 +199,33 @@ def main():
                 prediction, confidence = model.predict(processed_image)
                 st.session_state.prediction = prediction
                 st.session_state.confidence = confidence
+                
+                # Display results
+                st.markdown(f"**Prediction:** {st.session_state.prediction}")
+                st.markdown(f"**Confidence:** {st.session_state.confidence:.0%}")
+                
+                # Add submit option
+                st.markdown(f"**True label:**")
+                true_label = st.number_input("", 
+                                        min_value=0, max_value=9, step=1,
+                                        value=int(prediction),
+                                        label_visibility="collapsed")
+                
+                if st.button("Submit"):
+                    log_prediction(prediction, true_label, confidence)
+                    st.success("Prediction logged!")
+            else:
+                st.write("Draw a digit to see prediction")
+        else:
+            st.write("Draw a digit to see prediction")
 
-    with col2:
-        if st.session_state.prediction is not None:
-            st.write(f"Prediction: {st.session_state.prediction}")
-            st.write(f"Confidence: {st.session_state.confidence:.0%}")
-            
-            # Allow user to input true label
-            true_label = st.number_input("True label:", 
-                                       min_value=0, 
-                                       max_value=9,
-                                       step=1)
-
-            if st.button('Submit'):
-                # Log the prediction
-                log_prediction(st.session_state.prediction, true_label, st.session_state.confidence)
-                st.success("Prediction logged successfully!")
-
-    # Display prediction history
-    st.subheader("History")
+    # Display prediction history below (removed the divider line)
+    st.markdown("### History")
     history_df = get_prediction_history()
     if not history_df.empty:
+        # Calculate dynamic height based on number of rows (about 35px per row, plus 35px for header)
+        table_height = min(35 * (len(history_df) + 1), 300)
+        
         st.dataframe(
             history_df,
             hide_index=True,
@@ -241,9 +233,14 @@ def main():
                 "timestamp": st.column_config.DatetimeColumn(
                     "timestamp",
                     format="YYYY-MM-DD HH:mm:ss"
-                )
-            }
+                ),
+                "pred": "prediction",
+                "label": "label"
+            },
+            height=table_height
         )
+    else:
+        st.info("No prediction history yet")
 
 if __name__ == "__main__":
     main() 
