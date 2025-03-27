@@ -3,7 +3,6 @@
 # Remote server settings
 REMOTE_USER="root"
 REMOTE_HOST="37.27.197.79"
-SSH_KEY="/root/.ssh/id_rsa"  # Use server's local SSH key since this script runs on the server
 DB_CONTAINER="mnist-digit-recognizer-db-1"
 
 # Database settings
@@ -25,9 +24,33 @@ elif [[ "$1" =~ ^[0-9]+$ ]]; then
     LIMIT="$1"
 fi
 
+# Detect if running on server or locally
+IS_SERVER=false
+if [[ "$(hostname)" == *"localhost"* ]] || [[ "$(hostname)" == "server" ]] || [[ "$(hostname)" == "ip-"* ]]; then
+    IS_SERVER=true
+fi
+
+# If running locally, execute on remote server
+if [ "$IS_SERVER" = false ]; then
+    echo -e "${YELLOW}Connecting to remote server...${NC}"
+    
+    # Forward arguments to the remote script
+    ARGS=""
+    if [ "$#" -gt 0 ]; then
+        ARGS="$@"
+    fi
+    
+    # Execute script on remote server and pass along the output
+    ssh ${REMOTE_USER}@${REMOTE_HOST} "cd /root/mnist-digit-recognizer && ./scripts/view_db.sh $ARGS"
+    
+    echo -e "\n${GREEN}Remote connection closed.${NC}"
+    echo -e "To view the local database, run: ./scripts/local/view_local_db.sh"
+    exit 0
+fi
+
 echo -e "${YELLOW}Viewing server database records (limit: $LIMIT)...${NC}"
 
-# Since this script runs directly on the server, we don't need SSH
+# Running directly on the server
 TOTAL_RECORDS=$(docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -tAc "SELECT COUNT(*) FROM predictions;")
 LABELED_RECORDS=$(docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -tAc "SELECT COUNT(*) FROM predictions WHERE true_label IS NOT NULL;")
 CORRECT_PREDICTIONS=$(docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -tAc "SELECT COUNT(*) FROM predictions WHERE predicted_digit = true_label;")
