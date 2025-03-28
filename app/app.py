@@ -156,10 +156,26 @@ def load_model():
     
     # Get the absolute path to the model file
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(os.path.dirname(current_dir), 'model', 'saved_models', 'mnist_model.pth')
+    project_root = os.path.dirname(current_dir)
     
-    if not os.path.exists(model_path):
-        st.error(f"Model file not found at {model_path}. Please train the model first.")
+    # Define possible model paths (local development vs Docker)
+    possible_paths = [
+        os.path.join(project_root, 'model', 'saved_models', 'mnist_model.pth'),  # Local path
+        os.path.join(project_root, 'saved_models', 'mnist_model.pth'),           # Old local path
+        '/app/model/saved_models/mnist_model.pth',                               # Docker path (new)
+        '/app/saved_models/mnist_model.pth'                                      # Docker path (old)
+    ]
+    
+    # Try each path until we find the model
+    model_path = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            model_path = path
+            print(f"Found model at: {model_path}")
+            break
+    
+    if model_path is None:
+        st.error(f"Model file not found. Checked paths: {', '.join(possible_paths)}")
         return None
         
     model.load_state_dict(torch.load(model_path, map_location=device))
