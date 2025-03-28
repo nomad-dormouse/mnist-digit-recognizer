@@ -21,7 +21,7 @@ services:
       - DB_PASSWORD=postgres
       - PYTHONUNBUFFERED=1
     volumes:
-      - ./saved_models:/app/saved_models:ro
+      - ./model/saved_models:/app/model/saved_models:ro
     networks:
       - mnist-network
     deploy:

@@ -103,7 +103,7 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
 
     # Set up environment
     echo "Setting up environment..."
-    mkdir -p saved_models
+    mkdir -p model/saved_models
 
     # Check dependencies
     echo "Checking dependencies..."
@@ -115,7 +115,7 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
     done
 
     # Train model if needed
-    if [ ! -f "saved_models/mnist_model.pth" ]; then
+    if [ ! -f "model/saved_models/mnist_model.pth" ]; then
         echo "Training the model..."
         docker run --rm -v \$(pwd):/app -w /app python:3.9-slim bash -c \
             "pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu torchvision numpy && python model/train.py"

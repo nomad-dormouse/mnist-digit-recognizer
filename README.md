@@ -29,12 +29,13 @@ This project demonstrates an end-to-end machine learning application that:
 .
 ├── app/                    # Streamlit web application
 ├── model/                  # PyTorch model and training code
+│   ├── data/               # Training data directory
+│   └── saved_models/       # Saved model weights
 ├── database/               # Database schemas and tools
 │   └── init.sql           # Database initialization script
 ├── docker/                 # Docker configuration files
 │   └── docker-compose.yml # Multi-container Docker setup
 ├── local/                  # Local development tools and setup
-├── saved_models/          # Saved model weights
 ├── server/                 # Server management tools
 │   ├── check_web_logs.sh  # Web container logs viewer
 │   ├── deploy.sh          # Deployment script

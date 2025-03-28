@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create directory for model
-RUN mkdir -p saved_models
+RUN mkdir -p model/saved_models
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \

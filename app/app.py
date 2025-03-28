@@ -156,7 +156,7 @@ def load_model():
     
     # Get the absolute path to the model file
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(os.path.dirname(current_dir), 'saved_models', 'mnist_model.pth')
+    model_path = os.path.join(os.path.dirname(current_dir), 'model', 'saved_models', 'mnist_model.pth')
     
     if not os.path.exists(model_path):
         st.error(f"Model file not found at {model_path}. Please train the model first.")
