@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create directory for model
-RUN mkdir -p saved_models
+RUN mkdir -p model/saved_models
 
 # Patch the app.py file to use the database service name for connectivity
 RUN sed -i 's/DB_HOST = os.getenv.*$/DB_HOST = "mnist-digit-recognizer-db-1"/' app/app.py && \

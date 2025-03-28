@@ -87,7 +87,7 @@ docker build -t mnist-app-local -f local/Dockerfile.local .
 docker run -d --name mnist-digit-recognizer-web-1 \
     --network mnist-network \
     -p 8501:8501 \
-    -v "$(pwd)/saved_models:/app/saved_models:ro" \
+    -v "$(pwd)/model/saved_models:/app/model/saved_models:ro" \
     mnist-app-local
 
 # Show the URL and open browser
