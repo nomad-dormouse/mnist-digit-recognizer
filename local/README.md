@@ -16,48 +16,15 @@ This script will:
 3. Configure all environment variables
 4. Launch the application in Docker containers
 
-## Manual Setup
+## Available Tools
 
-If you prefer to set up the environment manually:
+This directory includes several useful development tools:
 
-### 1. Create a virtual environment
-
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: .\venv\Scripts\activate
-```
-
-### 2. Install dependencies
-
-```bash
-pip install -r ../requirements.txt
-```
-
-### 3. Set up environment variables
-
-Create a `.env.local` file in this directory with:
-```
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=mnist_db
-DB_USER=postgres
-DB_PASSWORD=postgres
-```
-
-Or use the existing `.env.local` file as a template.
-
-### 4. Initialize the PostgreSQL database
-
-```bash
-psql -U postgres -c "CREATE DATABASE mnist_db;"
-psql -U postgres -d mnist_db -f ../database/init.sql
-```
-
-### 5. Run the Streamlit app
-
-```bash
-streamlit run ../app/app.py
-```
+- **run_locally.sh**: Main script for running the application in Docker
+- **view_local_db.sh**: Script to view local database statistics and prediction history
+- **view_mnist_samples.py**: Python script to generate an HTML file with MNIST dataset samples
+- **Dockerfile.local**: Docker configuration for local development
+- **.env.local**: Environment variable template for local development
 
 ## Viewing MNIST Samples
 
