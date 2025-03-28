@@ -6,7 +6,7 @@
 # This script deploys the MNIST Digit Recognizer application to a remote server.
 # 
 # Usage:
-#   ./server/deploy.sh
+#   ./deploy.sh
 #
 # Requirements:
 #   - SSH access to the remote server (Hetzner)
