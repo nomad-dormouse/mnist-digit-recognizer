@@ -43,6 +43,18 @@ if is_running_locally and DB_HOST == 'db':
 
 def get_db_connection():
     """Connect to the database using environment variables."""
+    error_msg = None
+    
+    # Log connection attempt for debugging
+    connection_params = {
+        'host': DB_HOST,
+        'port': DB_PORT,
+        'dbname': DB_NAME,
+        'user': DB_USER,
+        'password': '****' # masked for security
+    }
+    print(f"Attempting database connection with: {connection_params}")
+    
     try:
         conn = psycopg2.connect(
             host=DB_HOST,
@@ -52,11 +64,16 @@ def get_db_connection():
             password=DB_PASSWORD,
             connect_timeout=10  # Increased timeout
         )
+        print("Database connection successful")
         return conn
-    except psycopg2.Error:
+    except psycopg2.Error as e:
+        error_msg = f"Primary connection failed: {str(e)}"
+        print(error_msg)
+        
         # When using Docker Compose, the service name 'db' should be used
         if DB_HOST != 'db' and 'docker' in os.environ.get('HOSTNAME', ''):
             try:
+                print("Trying fallback connection to 'db' service...")
                 conn = psycopg2.connect(
                     host='db',
                     port=DB_PORT,
@@ -65,14 +82,17 @@ def get_db_connection():
                     password=DB_PASSWORD,
                     connect_timeout=10
                 )
+                print("Fallback connection successful")
                 return conn
-            except psycopg2.Error:
-                pass
+            except psycopg2.Error as e:
+                error_msg = f"{error_msg}\nFallback connection failed: {str(e)}"
+                print(f"Fallback connection failed: {str(e)}")
         
         # Try Docker container connection
         if DB_HOST == 'localhost':
             try:
                 # Get container IP
+                print("Trying to get container IP...")
                 import subprocess
                 result = subprocess.run(
                     ["docker", "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", "mnist-digit-recognizer-db-1"],
@@ -81,6 +101,7 @@ def get_db_connection():
                 container_ip = result.stdout.strip()
                 
                 if container_ip:
+                    print(f"Found container IP: {container_ip}. Attempting connection...")
                     conn = psycopg2.connect(
                         host=container_ip,
                         port=DB_PORT,
@@ -89,17 +110,21 @@ def get_db_connection():
                         password=DB_PASSWORD,
                         connect_timeout=10
                     )
+                    print("Container IP connection successful")
                     return conn
-            except Exception:
-                pass
+            except Exception as e:
+                error_msg = f"{error_msg}\nContainer IP connection failed: {str(e)}"
+                print(f"Container IP connection failed: {str(e)}")
         
+        print(f"All connection attempts failed: {error_msg}")
         return None
 
 def log_prediction(prediction, true_label, confidence):
     try:
         conn = get_db_connection()
         if conn is None:
-            return
+            st.warning("Could not connect to database. Prediction not saved.")
+            return False
             
         cur = conn.cursor()
         cur.execute(
@@ -112,8 +137,10 @@ def log_prediction(prediction, true_label, confidence):
         conn.commit()
         cur.close()
         conn.close()
-    except Exception:
-        pass
+        return True
+    except Exception as e:
+        st.error(f"Error saving prediction: {str(e)}")
+        return False
 
 def get_prediction_history():
     try:
@@ -221,8 +248,9 @@ def main():
                                         label_visibility="collapsed")
                 
                 if st.button("Submit"):
-                    log_prediction(prediction, true_label, confidence)
-                    st.success("Prediction logged!")
+                    if log_prediction(prediction, true_label, confidence):
+                        st.success("Prediction logged successfully!")
+                    # Error message is already shown by log_prediction if it fails
             else:
                 st.write("Draw a digit to see prediction")
         else:
