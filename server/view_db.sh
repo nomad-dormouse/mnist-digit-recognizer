@@ -3,15 +3,15 @@
 # ================================================================================
 # REMOTE SERVER DATABASE VIEWER
 # ================================================================================
-# This script connects to the remote server and displays database records.
+# This script shows statistics from the database on the remote server
 # 
 # Usage:
-#   ./database/view_db.sh [limit|all]
+#   ./server/view_db.sh [limit|all]
 #
 # Examples:
-#   ./database/view_db.sh        # Default 20 records
-#   ./database/view_db.sh 50     # Show 50 records
-#   ./database/view_db.sh all    # Show all records
+#   ./server/view_db.sh        # Default 20 records
+#   ./server/view_db.sh 50     # Show 50 records
+#   ./server/view_db.sh all    # Show all records
 # ================================================================================
 
 # Configuration

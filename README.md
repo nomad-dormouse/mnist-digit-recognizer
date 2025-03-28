@@ -30,12 +30,14 @@ This project demonstrates an end-to-end machine learning application that:
 ├── app/                    # Streamlit web application
 ├── model/                  # PyTorch model and training code
 ├── database/               # Database schemas and tools
-│   ├── init.sql           # Database initialization script
-│   └── view_db.sh         # Database statistics viewer
+│   └── init.sql           # Database initialization script
 ├── docker/                 # Docker configuration files
 ├── local/                  # Local development tools and setup
 ├── saved_models/          # Saved model weights
-├── deploy.sh              # Deployment script
+├── server/                 # Server management tools
+│   ├── check_web_logs.sh  # Web container logs viewer
+│   ├── deploy.sh          # Deployment script
+│   └── view_db.sh         # Database statistics viewer
 ├── requirements.txt        # Python dependencies
 ├── docker-compose.yml     # Multi-container Docker setup
 └── .env                   # Environment variables
@@ -57,14 +59,14 @@ This includes:
 To deploy the application to a production server:
 
 1. **Update deployment configuration:**
-   Edit `deploy.sh` and update:
+   Edit `server/deploy.sh` and update:
    - `REMOTE_HOST` with your server IP
    - `SSH_KEY` with your SSH key path
    - `REPO_URL` with your GitHub repository URL
 
 2. **Run the deployment script:**
    ```bash
-   ./deploy.sh
+   ./server/deploy.sh
    ```
 
 3. **Access the deployed application:**

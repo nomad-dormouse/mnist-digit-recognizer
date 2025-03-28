@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # ================================================================================
-# REMOTE SERVER DEPLOYMENT SCRIPT
+# DEPLOYMENT SCRIPT
 # ================================================================================
-# This script deploys the MNIST Digit Recognizer application to a remote server.
+# This script deploys the application to the remote server
 # 
 # Usage:
-#   ./deploy.sh
+#   ./server/deploy.sh
 #
 # Requirements:
 #   - SSH access to the remote server (Hetzner)
