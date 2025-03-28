@@ -22,47 +22,74 @@
 #   5. Configure the application to start on boot
 # ================================================================================
 
+# ================================================================================
+# CONFIGURATION
+# ================================================================================
 # Fail on any error
 set -e
 
-# Configuration
+# Remote server settings
 REMOTE_USER="root"
 REMOTE_HOST="37.27.197.79"  # Hetzner server IP
 REMOTE_DIR="/root/mnist-digit-recognizer"
 REPO_URL="https://github.com/nomad-dormouse/mnist-digit-recognizer.git"
-SSH_KEY="${HOME}/.ssh/hetzner_key"  # Full path using ${HOME} instead of ~
+SSH_KEY="${HOME}/.ssh/hetzner_key"
 
-# Colors
+# Terminal colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
-NC='\033[0m' # No Color
+BLUE='\033[0;34m'
+NC='\033[0m'  # No Color
 
-# Check if SSH key exists
-if [ ! -f "${SSH_KEY}" ]; then
-    echo -e "${RED}Error: SSH key not found at ${SSH_KEY}${NC}"
-    echo -e "Please ensure your SSH key is correctly set up."
+# ================================================================================
+# FUNCTIONS
+# ================================================================================
+function log_info() {
+  echo -e "${YELLOW}$1${NC}"
+}
+
+function log_success() {
+  echo -e "${GREEN}$1${NC}"
+}
+
+function log_error() {
+  echo -e "${RED}$1${NC}"
+}
+
+function check_prerequisites() {
+  if [ ! -f "${SSH_KEY}" ]; then
+    log_error "Error: SSH key not found at ${SSH_KEY}"
+    log_error "Please ensure your SSH key is correctly set up."
     exit 1
-fi
+  fi
+}
 
-echo -e "${YELLOW}Deploying MNIST Digit Recognizer to ${REMOTE_HOST}...${NC}"
+# ================================================================================
+# MAIN EXECUTION
+# ================================================================================
+# Check prerequisites
+check_prerequisites
+
+# Start deployment
+log_info "Deploying MNIST Digit Recognizer to ${REMOTE_HOST}..."
 
 # SSH into the remote server and perform deployment
 ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
     # Exit on error
     set -e
     
-    # Free up disk space first
+    # Free up disk space
     echo "Cleaning up disk space..."
     docker system prune -af --volumes
     apt-get clean
     journalctl --vacuum-time=1d
     
-    # Check available space
+    # Show available space
     echo "Available disk space:"
     df -h /
     
-    # Clone or pull the repository
+    # Clone or update repository
     if [ -d "${REMOTE_DIR}" ]; then
         echo "Updating existing repository..."
         cd ${REMOTE_DIR}
@@ -74,54 +101,51 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
         cd ${REMOTE_DIR}
     fi
 
-    echo "Setting up directories..."
-    # Set up directories
+    # Set up environment
+    echo "Setting up environment..."
     mkdir -p saved_models
 
-    # Check for Docker
-    if ! command -v docker &> /dev/null; then
-        echo "Docker not found! Please install Docker first."
-        exit 1
-    fi
-    
-    # Check for Docker Compose
-    if ! command -v docker-compose &> /dev/null; then
-        echo "Docker Compose not found! Please install Docker Compose first."
-        exit 1
-    fi
+    # Check dependencies
+    echo "Checking dependencies..."
+    for cmd in docker docker-compose; do
+        if ! command -v \$cmd &> /dev/null; then
+            echo "\$cmd not found! Please install \$cmd first."
+            exit 1
+        fi
+    done
 
-    # Check if model exists before training
+    # Train model if needed
     if [ ! -f "saved_models/mnist_model.pth" ]; then
         echo "Training the model..."
-        docker run --rm -v \$(pwd):/app -w /app python:3.9-slim bash -c "pip install --no-cache-dir torch torchvision numpy && python model/train.py"
+        docker run --rm -v \$(pwd):/app -w /app python:3.9-slim bash -c \
+            "pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu torchvision numpy && python model/train.py"
     else
         echo "Model already exists, skipping training."
     fi
 
-    # Clean up and restart containers
-    echo "Restarting containers..."
+    # Prepare containers
+    echo "Preparing Docker environment..."
     docker-compose down || true
     docker volume rm mnist-digit-recognizer_postgres_data || true
     
-    # Modify Dockerfile if it exists to use CPU-only version of PyTorch
+    # Ensure CPU-only PyTorch to save space
     if [ -f "Dockerfile" ]; then
-        echo "Modifying Dockerfile to use CPU-only packages..."
-        sed -i 's/torch/torch --index-url https://download.pytorch.org/whl/cpu/g' Dockerfile
-        sed -i 's/nvidia-cudnn-cu12//' Dockerfile
+        echo "Configuring for CPU-only PyTorch..."
+        sed -i 's/torch/torch --index-url https:\/\/download.pytorch.org\/whl\/cpu\//g' Dockerfile
+        sed -i '/nvidia-cudnn-cu12/d' Dockerfile
     fi
     
-    # Build and start without cache
-    echo "Building containers..."
+    # Build and start containers
+    echo "Building and starting containers..."
     docker-compose build --no-cache
-    echo "Starting containers..."
     docker-compose up -d
     
-    # Verify containers are running
-    echo "Verifying containers..."
+    # Verify deployment
+    echo "Verifying deployment..."
     docker-compose ps
     
-    # Set up systemd service for automatic restart
-    echo "Setting up systemd service..."
+    # Configure auto-start
+    echo "Setting up auto-start service..."
     cat > /etc/systemd/system/mnist-app.service << EOL
 [Unit]
 Description=MNIST Digit Recognizer
@@ -140,7 +164,7 @@ TimeoutStartSec=0
 WantedBy=multi-user.target
 EOL
 
-    # Enable service and display status
+    # Enable service
     systemctl daemon-reload
     systemctl enable mnist-app.service
     
@@ -148,10 +172,11 @@ EOL
     echo "Deployment completed successfully!"
 EOF
 
-# Check if SSH command succeeded
+# Check deployment result
 if [ $? -eq 0 ]; then
-    echo -e "${GREEN}Deployment script executed successfully!${NC}"
+    log_success "Deployment completed successfully!"
+    log_info "You can access the application at: http://${REMOTE_HOST}:8501"
 else
-    echo -e "${RED}Deployment failed! Please check the error messages above.${NC}"
+    log_error "Deployment failed! Please check the error messages above."
     exit 1
 fi 
