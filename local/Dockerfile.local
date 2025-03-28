@@ -19,8 +19,10 @@ COPY . .
 RUN mkdir -p model/saved_models
 
 # Patch the app.py file to use the database service name for connectivity
+# and to skip the 'db' hostname attempt in local Docker
 RUN sed -i 's/DB_HOST = os.getenv.*$/DB_HOST = "mnist-digit-recognizer-db-1"/' app/app.py && \
-    sed -i 's/is_running_locally = not os.environ.get.*/is_running_locally = False/' app/app.py
+    sed -i 's/is_running_locally = not os.environ.get.*/is_running_locally = False/' app/app.py && \
+    sed -i 's/if os.path.exists.*or os.environ.get.*/if False:/' app/app.py
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
