@@ -30,7 +30,7 @@ REMOTE_USER="root"
 REMOTE_HOST="37.27.197.79"  # Hetzner server IP
 REMOTE_DIR="/root/mnist-digit-recognizer"
 REPO_URL="https://github.com/nomad-dormouse/mnist-digit-recognizer.git"
-SSH_KEY="~/.ssh/hetzner_key"
+SSH_KEY="${HOME}/.ssh/hetzner_key"  # Full path using ${HOME} instead of ~
 
 # Colors
 GREEN='\033[0;32m'
