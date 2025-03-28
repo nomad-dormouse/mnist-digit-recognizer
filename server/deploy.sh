@@ -22,6 +22,7 @@
 #   5. Configure the application to start on boot
 # ================================================================================
 
+# Fail on any error
 set -e
 
 # Configuration
@@ -34,12 +35,21 @@ SSH_KEY="~/.ssh/hatzner_key"
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m' # No Color
+
+# Check if SSH key exists
+if [ ! -f "${SSH_KEY}" ]; then
+    echo -e "${RED}Error: SSH key not found at ${SSH_KEY}${NC}"
+    echo -e "Please ensure your SSH key is correctly set up."
+    exit 1
+fi
 
 echo -e "${YELLOW}Deploying MNIST Digit Recognizer to ${REMOTE_HOST}...${NC}"
 
 # SSH into the remote server and perform deployment
-ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << 'EOF'
+ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
+    # Exit on error
     set -e
     
     # Clone or pull the repository
@@ -49,18 +59,33 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << 'EOF'
         git pull
     else
         echo "Cloning repository..."
+        mkdir -p "${REMOTE_DIR}"
         git clone ${REPO_URL} ${REMOTE_DIR}
         cd ${REMOTE_DIR}
     fi
 
-    # Set up environment and directories
-    cp -f .env.production .env
+    echo "Setting up directories..."
+    # Set up directories
     mkdir -p saved_models
+
+    # Check for Docker
+    if ! command -v docker &> /dev/null; then
+        echo "Docker not found! Please install Docker first."
+        exit 1
+    fi
+    
+    # Check for Docker Compose
+    if ! command -v docker-compose &> /dev/null; then
+        echo "Docker Compose not found! Please install Docker Compose first."
+        exit 1
+    fi
 
     # Check if model exists before training
     if [ ! -f "saved_models/mnist_model.pth" ]; then
         echo "Training the model..."
-        docker run --rm -v $(pwd):/app -w /app python:3.9-slim bash -c "pip install --no-cache-dir torch torchvision numpy && python model/train.py"
+        docker run --rm -v \$(pwd):/app -w /app python:3.9-slim bash -c "pip install --no-cache-dir torch torchvision numpy && python model/train.py"
+    else
+        echo "Model already exists, skipping training."
     fi
 
     # Clean up and restart containers
@@ -69,10 +94,17 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << 'EOF'
     docker volume rm mnist-digit-recognizer_postgres_data || true
     
     # Build and start without cache
+    echo "Building containers..."
     docker-compose build --no-cache
+    echo "Starting containers..."
     docker-compose up -d
     
+    # Verify containers are running
+    echo "Verifying containers..."
+    docker-compose ps
+    
     # Set up systemd service for automatic restart
+    echo "Setting up systemd service..."
     cat > /etc/systemd/system/mnist-app.service << EOL
 [Unit]
 Description=MNIST Digit Recognizer
@@ -99,4 +131,10 @@ EOL
     echo "Deployment completed successfully!"
 EOF
 
-echo -e "${GREEN}Deployment script executed successfully!${NC}" 
+# Check if SSH command succeeded
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}Deployment script executed successfully!${NC}"
+else
+    echo -e "${RED}Deployment failed! Please check the error messages above.${NC}"
+    exit 1
+fi 
