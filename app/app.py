@@ -55,6 +55,24 @@ def get_db_connection():
     }
     print(f"Attempting database connection with: {connection_params}")
     
+    # When in Docker, always try 'db' hostname first
+    if os.path.exists('/.dockerenv') or os.environ.get('HOSTNAME', '').startswith('mnist-digit-'):
+        print("Docker environment detected, trying 'db' hostname first...")
+        try:
+            conn = psycopg2.connect(
+                host='db',
+                port=DB_PORT,
+                dbname=DB_NAME,
+                user=DB_USER,
+                password=DB_PASSWORD,
+                connect_timeout=10
+            )
+            print("Docker network connection successful")
+            return conn
+        except psycopg2.Error as e:
+            error_msg = f"Docker network connection failed: {str(e)}"
+            print(error_msg)
+    
     try:
         conn = psycopg2.connect(
             host=DB_HOST,
@@ -70,8 +88,8 @@ def get_db_connection():
         error_msg = f"Primary connection failed: {str(e)}"
         print(error_msg)
         
-        # When using Docker Compose, the service name 'db' should be used
-        if DB_HOST != 'db' and 'docker' in os.environ.get('HOSTNAME', ''):
+        # Try fallback connection if needed
+        if DB_HOST != 'db':
             try:
                 print("Trying fallback connection to 'db' service...")
                 conn = psycopg2.connect(
@@ -87,34 +105,6 @@ def get_db_connection():
             except psycopg2.Error as e:
                 error_msg = f"{error_msg}\nFallback connection failed: {str(e)}"
                 print(f"Fallback connection failed: {str(e)}")
-        
-        # Try Docker container connection
-        if DB_HOST == 'localhost':
-            try:
-                # Get container IP
-                print("Trying to get container IP...")
-                import subprocess
-                result = subprocess.run(
-                    ["docker", "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", "mnist-digit-recognizer-db-1"],
-                    capture_output=True, text=True, check=True
-                )
-                container_ip = result.stdout.strip()
-                
-                if container_ip:
-                    print(f"Found container IP: {container_ip}. Attempting connection...")
-                    conn = psycopg2.connect(
-                        host=container_ip,
-                        port=DB_PORT,
-                        dbname=DB_NAME,
-                        user=DB_USER,
-                        password=DB_PASSWORD,
-                        connect_timeout=10
-                    )
-                    print("Container IP connection successful")
-                    return conn
-            except Exception as e:
-                error_msg = f"{error_msg}\nContainer IP connection failed: {str(e)}"
-                print(f"Container IP connection failed: {str(e)}")
         
         print(f"All connection attempts failed: {error_msg}")
         return None
