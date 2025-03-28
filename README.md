@@ -6,28 +6,22 @@ A full-stack machine learning application that allows users to draw digits and g
 
 **GitHub Repository**: [https://github.com/nomad-dormouse/mnist-digit-recognizer](https://github.com/nomad-dormouse/mnist-digit-recognizer)
 
-## AI Development Acknowledgment
-
-This project was developed with the assistance of AI tools, specifically:
-- [Cursor](https://cursor.sh/) - An AI-powered code editor that provided intelligent code suggestions and pair programming capabilities
-- The development process involved AI-assisted coding, debugging, and documentation generation, while maintaining human oversight and validation for all critical decisions and implementations
-
 ## Features
 
 - Deep learning model for handwritten digit classification (PyTorch)
 - Interactive web interface with drawing canvas (Streamlit)
-- Database for prediction logging (PostgreSQL)
-- Containerized deployment (Docker & Docker Compose)
-- Complete CI/CD pipeline
+- Database for prediction logging and analytics (PostgreSQL)
+- Containerized deployment with Docker and Docker Compose
+- Automated deployment pipeline
 
 ## Project Overview
 
-This project is an end-to-end machine learning application that:
+This project demonstrates an end-to-end machine learning application that:
 
-1. Uses a PyTorch Convolutional Neural Network (CNN) trained on the MNIST dataset
-2. Provides a web interface for drawing digits and getting predictions
-3. Records predictions and user feedback in a PostgreSQL database
-4. Is containerized for easy deployment
+1. Implements a PyTorch Convolutional Neural Network (CNN) trained on the MNIST dataset
+2. Provides an intuitive web interface for drawing digits and receiving real-time predictions
+3. Records predictions and user feedback in a PostgreSQL database for continuous improvement
+4. Deploys seamlessly using containerization for consistent environments
 
 ## Project Structure
 
@@ -39,75 +33,30 @@ This project is an end-to-end machine learning application that:
 │   ├── init.sql           # Database initialization script
 │   └── view_db.sh         # Database statistics viewer
 ├── docker/                 # Docker configuration files
-├── local/                  # Local development tools
-│   ├── run_locally.sh     # Local Docker development runner
-│   └── view_local_db.sh   # Local database viewer
-├── server/                 # Server management and deployment
-│   └── deploy.sh          # Deployment script
-├── saved_models/           # Saved model weights
+├── local/                  # Local development tools and setup
+├── saved_models/          # Saved model weights
+├── deploy.sh              # Deployment script
 ├── requirements.txt        # Python dependencies
-├── docker-compose.yml      # Multi-container Docker setup
-└── .env                    # Production environment variables
+├── docker-compose.yml     # Multi-container Docker setup
+└── .env                   # Environment variables
 ```
 
-## Local Development Setup
+## Local Development
 
-The easiest way to run the application locally is to use the provided script:
+For detailed instructions on setting up and running the application locally, please refer to the [Local Development Guide](local/README.md).
 
-```bash
-./local/run_locally.sh
-```
+This includes:
+- Quick setup with Docker
+- Manual setup instructions
+- Database initialization
+- Environment configuration
+- Development tools
 
-This script will:
-1. Start Docker containers for the app and database
-2. Initialize the database with proper schema
-3. Set up all environment variables
-4. Run the application in Docker containers
+## Docker Deployment
 
-Alternatively, if you want to set things up manually:
+### Local Docker Setup
 
-1. **Create a virtual environment:**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: .\venv\Scripts\activate
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Set up environment variables:**
-   Create a `.env.local` file in the `local/` directory with the following variables:
-   ```
-   DB_HOST=localhost
-   DB_PORT=5432
-   DB_NAME=mnist_db
-   DB_USER=postgres
-   DB_PASSWORD=postgres
-   ```
-
-4. **Set up the PostgreSQL database:**
-   ```bash
-   psql -U postgres -c "CREATE DATABASE mnist_db;"
-   psql -U postgres -d mnist_db -c "
-   CREATE TABLE IF NOT EXISTS predictions (
-       id SERIAL PRIMARY KEY,
-       timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-       predicted_digit INTEGER NOT NULL,
-       true_label INTEGER,
-       confidence FLOAT NOT NULL
-   );"
-   ```
-
-5. **Run the Streamlit app:**
-   ```bash
-   streamlit run app/app.py
-   ```
-
-## Running with Docker
-
-1. **Build and start the containers:**
+1. **Build and start containers:**
    ```bash
    docker-compose up
    ```
@@ -115,37 +64,47 @@ Alternatively, if you want to set things up manually:
 2. **Access the application:**
    Open your browser and navigate to `http://localhost:8501`
 
-## Deployment
+### Production Deployment
 
-1. **Update the deployment script with your server information:**
-   Edit `server/deploy.sh` and update:
+1. **Update deployment configuration:**
+   Edit `deploy.sh` and update:
    - `REMOTE_HOST` with your server IP
+   - `SSH_KEY` with your SSH key path
    - `REPO_URL` with your GitHub repository URL
 
 2. **Run the deployment script:**
    ```bash
-   ./server/deploy.sh
+   ./deploy.sh
    ```
+
 3. **Access the deployed application:**
    Open your browser and navigate to `http://your-server-ip:8501`
 
-## Model Architecture
+## Technical Details
 
-The model is a Convolutional Neural Network (CNN) with the following architecture:
+### Model Architecture
+
+The digit recognition model is a Convolutional Neural Network (CNN) with:
 - 2 convolutional layers with ReLU activation
-- Max pooling
-- Dropout for regularization
-- 2 fully connected layers
+- Max pooling layers for spatial dimensionality reduction
+- Dropout regularization to prevent overfitting
+- 2 fully connected layers for classification
 - Trained to >99% accuracy on the MNIST dataset
 
-## Database Schema
+### Database Schema
 
-The PostgreSQL database logs predictions with the following schema:
+The PostgreSQL database stores predictions with:
 - `id`: Auto-incrementing primary key
-- `timestamp`: Timestamp of prediction
+- `timestamp`: When the prediction was made
 - `predicted_digit`: Model's prediction (0-9)
-- `true_label`: User-provided correct label
-- `confidence`: Model's confidence score
+- `true_label`: User-provided correct label (for feedback)
+- `confidence`: Model's confidence score (probability)
+
+## AI Development Acknowledgment
+
+This project was developed with assistance from AI tools:
+- [Cursor](https://cursor.sh/) - An AI-powered code editor that provided intelligent code suggestions
+- The development process involved AI-assisted coding, debugging, and documentation generation, with human oversight for all critical decisions
 
 ## License
 
