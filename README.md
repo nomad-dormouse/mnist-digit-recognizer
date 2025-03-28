@@ -52,19 +52,9 @@ This includes:
 - Environment configuration
 - Development tools
 
-## Docker Deployment
+## Deployment
 
-### Local Docker Setup
-
-1. **Build and start containers:**
-   ```bash
-   docker-compose up
-   ```
-
-2. **Access the application:**
-   Open your browser and navigate to `http://localhost:8501`
-
-### Production Deployment
+To deploy the application to a production server:
 
 1. **Update deployment configuration:**
    Edit `deploy.sh` and update:
