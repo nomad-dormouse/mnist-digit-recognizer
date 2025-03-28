@@ -10,7 +10,7 @@
 #
 # Requirements:
 #   - SSH access to the remote server (Hetzner)
-#   - SSH key at ~/.ssh/hatzner_key
+#   - SSH key at ~/.ssh/hetzner_key
 #   - Git and Docker installed on the remote server
 #
 # Description:
@@ -30,7 +30,7 @@ REMOTE_USER="root"
 REMOTE_HOST="37.27.197.79"  # Hetzner server IP
 REMOTE_DIR="/root/mnist-digit-recognizer"
 REPO_URL="https://github.com/nomad-dormouse/mnist-digit-recognizer.git"
-SSH_KEY="~/.ssh/hatzner_key"
+SSH_KEY="~/.ssh/hetzner_key"
 
 # Colors
 GREEN='\033[0;32m'
