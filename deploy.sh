@@ -52,6 +52,16 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
     # Exit on error
     set -e
     
+    # Free up disk space first
+    echo "Cleaning up disk space..."
+    docker system prune -af --volumes
+    apt-get clean
+    journalctl --vacuum-time=1d
+    
+    # Check available space
+    echo "Available disk space:"
+    df -h /
+    
     # Clone or pull the repository
     if [ -d "${REMOTE_DIR}" ]; then
         echo "Updating existing repository..."
@@ -92,6 +102,13 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
     echo "Restarting containers..."
     docker-compose down || true
     docker volume rm mnist-digit-recognizer_postgres_data || true
+    
+    # Modify Dockerfile if it exists to use CPU-only version of PyTorch
+    if [ -f "Dockerfile" ]; then
+        echo "Modifying Dockerfile to use CPU-only packages..."
+        sed -i 's/torch/torch --index-url https://download.pytorch.org/whl/cpu/g' Dockerfile
+        sed -i 's/nvidia-cudnn-cu12//' Dockerfile
+    fi
     
     # Build and start without cache
     echo "Building containers..."
