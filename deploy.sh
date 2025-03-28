@@ -144,6 +144,38 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
     echo "Verifying deployment..."
     docker-compose ps
     
+    # Wait for database to be ready
+    echo "Waiting for database to initialize..."
+    sleep 10
+
+    # Initialize database if needed
+    echo "Checking database status..."
+    DB_CONTAINER=\$(docker ps | grep -E 'postgres|db' | awk '{print \$1}')
+    
+    if [ -n "\${DB_CONTAINER}" ]; then
+        echo "Checking if database exists..."
+        if ! docker exec \${DB_CONTAINER} psql -U postgres -lqt | cut -d \| -f 1 | grep -qw "mnist_db"; then
+            echo "Creating mnist_db database..."
+            docker exec \${DB_CONTAINER} psql -U postgres -c "CREATE DATABASE mnist_db;"
+            
+            echo "Initializing database schema..."
+            docker exec \${DB_CONTAINER} psql -U postgres -d mnist_db -c "
+                CREATE TABLE IF NOT EXISTS predictions (
+                    id SERIAL PRIMARY KEY,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    predicted_digit INTEGER NOT NULL,
+                    true_label INTEGER,
+                    confidence FLOAT NOT NULL
+                );
+            "
+            echo "Database initialized successfully."
+        else
+            echo "Database mnist_db already exists."
+        fi
+    else
+        echo "Database container not found. Check your docker-compose configuration."
+    fi
+    
     # Configure auto-start
     echo "Setting up auto-start service..."
     cat > /etc/systemd/system/mnist-app.service << EOL

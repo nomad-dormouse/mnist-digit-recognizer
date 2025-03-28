@@ -45,8 +45,26 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
     
     cd ${REMOTE_DIR}
     
+    # Check Docker status
+    echo "Checking Docker status..."
+    docker ps
+    
+    # List all containers (even stopped ones)
+    echo -e "\nListing all containers (including stopped):"
+    docker ps -a
+    
+    # Identify the database container
+    echo -e "\nLooking for database container..."
+    DB_CONTAINER=\$(docker ps | grep -E 'postgres|db' | awk '{print \$1}')
+    
+    if [ -z "\${DB_CONTAINER}" ]; then
+        echo "Database container not found! Check if the containers are running."
+        exit 1
+    fi
+    
+    echo "Found database container: \${DB_CONTAINER}"
+    
     # Database settings
-    DB_CONTAINER="mnist-digit-recognizer-db-1"
     DB_NAME="mnist_db"
     DB_USER="postgres"
     
@@ -58,17 +76,27 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
     
     echo "Viewing database records (limit: \$LIMIT)..."
     
-    # Check if the database container is running
-    echo "Checking Docker container status..."
-    if ! docker ps | grep -q \${DB_CONTAINER}; then
-        echo "Database container not running. Showing all containers:"
-        docker ps
+    # Check database connectivity
+    echo "Testing database connection..."
+    if ! docker exec \${DB_CONTAINER} psql -U \${DB_USER} -c "\l" | grep -q "\${DB_NAME}"; then
+        echo "Database '\${DB_NAME}' not found! Available databases:"
+        docker exec \${DB_CONTAINER} psql -U \${DB_USER} -c "\l"
+        echo "Using default 'postgres' database instead..."
+        DB_NAME="postgres"
+    fi
+    
+    echo "Connected to database. Retrieving records..."
+    
+    # Check if the predictions table exists
+    if ! docker exec \${DB_CONTAINER} psql -U \${DB_USER} -d \${DB_NAME} -c "\dt" | grep -q "predictions"; then
+        echo "No 'predictions' table found in the database!"
+        echo "Available tables:"
+        docker exec \${DB_CONTAINER} psql -U \${DB_USER} -d \${DB_NAME} -c "\dt"
         exit 1
     fi
     
-    echo "Database container found. Retrieving records..."
-    
     # Run queries in the database container
+    echo "Running queries..."
     TOTAL_RECORDS=\$(docker exec \${DB_CONTAINER} psql -U \${DB_USER} -d \${DB_NAME} -tAc "SELECT COUNT(*) FROM predictions;")
     LABELED_RECORDS=\$(docker exec \${DB_CONTAINER} psql -U \${DB_USER} -d \${DB_NAME} -tAc "SELECT COUNT(*) FROM predictions WHERE true_label IS NOT NULL;")
     CORRECT_PREDICTIONS=\$(docker exec \${DB_CONTAINER} psql -U \${DB_USER} -d \${DB_NAME} -tAc "SELECT COUNT(*) FROM predictions WHERE predicted_digit = true_label;")
