@@ -161,9 +161,7 @@ def load_model():
     # Define possible model paths (local development vs Docker)
     possible_paths = [
         os.path.join(project_root, 'model', 'saved_models', 'mnist_model.pth'),  # Local path
-        os.path.join(project_root, 'saved_models', 'mnist_model.pth'),           # Old local path
-        '/app/model/saved_models/mnist_model.pth',                               # Docker path (new)
-        '/app/saved_models/mnist_model.pth'                                      # Docker path (old)
+        '/app/model/saved_models/mnist_model.pth'                               # Docker path
     ]
     
     # Try each path until we find the model

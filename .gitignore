@@ -74,7 +74,7 @@ desktop.ini
 # Project specific
 # ================================================================================
 # Saved models
-saved_models/**/*.pth
+model/saved_models/**/*.pth
 **/*.pth
 
 # Data files

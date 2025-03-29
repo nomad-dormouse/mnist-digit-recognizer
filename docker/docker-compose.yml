@@ -22,7 +22,6 @@ services:
       - PYTHONUNBUFFERED=1
     volumes:
       - ./model/saved_models:/app/model/saved_models:ro
-      - ./model/saved_models:/app/saved_models:ro
     networks:
       - mnist-network
     deploy:
