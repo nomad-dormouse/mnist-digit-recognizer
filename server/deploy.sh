@@ -126,6 +126,9 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
     # Prepare containers
     echo "Preparing Docker environment..."
     docker-compose -f docker/docker-compose.yml down || true
+    
+    # Clean up volumes for fresh start
+    echo "Removing old database volume to ensure clean state..."
     docker volume rm mnist-digit-recognizer_postgres_data || true
     
     # Ensure CPU-only PyTorch to save space
@@ -146,34 +149,41 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
     
     # Wait for database to be ready
     echo "Waiting for database to initialize..."
-    sleep 10
-
-    # Initialize database if needed
-    echo "Checking database status..."
+    for i in {1..30}; do
+        if docker exec \$(docker ps | grep postgres | awk '{print \$1}') pg_isready -U postgres; then
+            echo "Database is ready!"
+            break
+        fi
+        echo -n "."
+        sleep 2
+    done
+    
+    # Verify database setup
+    echo "Verifying database setup..."
     DB_CONTAINER=\$(docker ps | grep -E 'postgres|db' | awk '{print \$1}')
     
     if [ -n "\${DB_CONTAINER}" ]; then
-        echo "Checking if database exists..."
+        # Check if database exists
         if ! docker exec \${DB_CONTAINER} psql -U postgres -lqt | cut -d \| -f 1 | grep -qw "mnist_db"; then
-            echo "Creating mnist_db database..."
+            echo "Database 'mnist_db' not found. Creating it now..."
             docker exec \${DB_CONTAINER} psql -U postgres -c "CREATE DATABASE mnist_db;"
-            
-            echo "Initializing database schema..."
-            docker exec \${DB_CONTAINER} psql -U postgres -d mnist_db -c "
-                CREATE TABLE IF NOT EXISTS predictions (
-                    id SERIAL PRIMARY KEY,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    predicted_digit INTEGER NOT NULL,
-                    true_label INTEGER,
-                    confidence FLOAT NOT NULL
-                );
-            "
-            echo "Database initialized successfully."
         else
-            echo "Database mnist_db already exists."
+            echo "Database 'mnist_db' exists."
+        fi
+        
+        # Import init.sql into the database
+        echo "Initializing database schema..."
+        docker exec -i \${DB_CONTAINER} psql -U postgres -d mnist_db < database/init.sql
+        
+        # Verify table setup
+        echo "Verifying table setup..."
+        if docker exec \${DB_CONTAINER} psql -U postgres -d mnist_db -c "\\dt predictions" | grep -q "predictions"; then
+            echo "Table 'predictions' exists and is ready."
+        else
+            echo "WARNING: Table 'predictions' was not created properly. Check your init.sql file."
         fi
     else
-        echo "Database container not found. Check your docker-compose configuration."
+        echo "ERROR: Database container not found! Check your docker-compose configuration."
     fi
     
     # Configure auto-start
