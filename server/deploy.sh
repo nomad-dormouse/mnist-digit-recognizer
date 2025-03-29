@@ -125,7 +125,7 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
 
     # Prepare containers
     echo "Preparing Docker environment..."
-    docker-compose -f docker/docker-compose.yml down || true
+    docker-compose down || true
     
     # Make sure all related containers are stopped
     echo "Stopping any related containers..."
@@ -145,13 +145,12 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
     
     # Build and start containers
     echo "Building and starting containers..."
-    cd /root/mnist-digit-recognizer
-    docker-compose -f docker/docker-compose.yml build --no-cache
-    docker-compose -f docker/docker-compose.yml up -d
+    docker-compose build --no-cache
+    docker-compose up -d
     
     # Verify deployment
     echo "Verifying deployment..."
-    docker-compose -f docker/docker-compose.yml ps
+    docker-compose ps
     
     # Wait for database to be ready
     echo "Waiting for database to initialize..."
@@ -204,8 +203,8 @@ Requires=docker.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=${REMOTE_DIR}
-ExecStart=docker-compose -f docker/docker-compose.yml up -d
-ExecStop=docker-compose -f docker/docker-compose.yml down
+ExecStart=docker-compose up -d
+ExecStop=docker-compose down
 TimeoutStartSec=0
 
 [Install]
