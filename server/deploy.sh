@@ -125,7 +125,11 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
 
     # Prepare containers
     echo "Preparing Docker environment..."
-    docker-compose -f docker/docker-compose.yml down || true
+    docker-compose -f ./docker/docker-compose.yml down || true
+    
+    # Make sure all related containers are stopped
+    echo "Stopping any related containers..."
+    docker stop $(docker ps -a | grep mnist-digit-recognizer | awk '{print \$1}') 2>/dev/null || true
     
     # Clean up volumes for fresh start
     echo "Removing old database volume to ensure clean state..."
@@ -140,12 +144,12 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
     
     # Build and start containers
     echo "Building and starting containers..."
-    docker-compose -f docker/docker-compose.yml build --no-cache
-    docker-compose -f docker/docker-compose.yml up -d
+    docker-compose -f ./docker/docker-compose.yml build --no-cache
+    docker-compose -f ./docker/docker-compose.yml up -d
     
     # Verify deployment
     echo "Verifying deployment..."
-    docker-compose -f docker/docker-compose.yml ps
+    docker-compose -f ./docker/docker-compose.yml ps
     
     # Wait for database to be ready
     echo "Waiting for database to initialize..."
@@ -198,8 +202,8 @@ Requires=docker.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=${REMOTE_DIR}
-ExecStart=/usr/local/bin/docker-compose -f docker/docker-compose.yml up -d
-ExecStop=/usr/local/bin/docker-compose -f docker/docker-compose.yml down
+ExecStart=/usr/local/bin/docker-compose -f ./docker/docker-compose.yml up -d
+ExecStop=/usr/local/bin/docker-compose -f ./docker/docker-compose.yml down
 TimeoutStartSec=0
 
 [Install]
