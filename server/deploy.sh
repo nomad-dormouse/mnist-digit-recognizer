@@ -211,9 +211,124 @@ TimeoutStartSec=0
 WantedBy=multi-user.target
 EOL
 
-    # Enable service
+    # Create a script to check and repair the database
+    echo "Creating database check script..."
+    cat > ${REMOTE_DIR}/server/db_check.sh << EOL
+#!/bin/bash
+
+# Log function
+log() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] \$1" | tee -a /var/log/mnist_db_check.log
+}
+
+log "Starting database check"
+
+# Make sure we're in the right directory
+cd ${REMOTE_DIR}
+
+# Check if docker is running
+if ! docker info > /dev/null 2>&1; then
+  log "Docker is not running. Exiting."
+  exit 1
+fi
+
+# Check if the database container is running
+DB_CONTAINER=\$(docker ps | grep -E 'postgres|db' | grep mnist-digit-recognizer | awk '{print \$1}')
+
+if [ -z "\$DB_CONTAINER" ]; then
+  log "Database container not running. Starting containers..."
+  docker-compose up -d
+  
+  # Wait for database to start
+  sleep 10
+  DB_CONTAINER=\$(docker ps | grep -E 'postgres|db' | grep mnist-digit-recognizer | awk '{print \$1}')
+  
+  if [ -z "\$DB_CONTAINER" ]; then
+    log "Failed to start database container. Exiting."
+    exit 1
+  fi
+fi
+
+log "Database container is running: \$DB_CONTAINER"
+
+# Check if the mnist_db database exists
+if ! docker exec \$DB_CONTAINER psql -U postgres -lqt | cut -d \| -f 1 | grep -qw "mnist_db"; then
+  log "mnist_db database not found. Creating it..."
+  docker exec \$DB_CONTAINER psql -U postgres -c "CREATE DATABASE mnist_db;"
+  
+  # Apply init.sql to the new database
+  log "Initializing database schema..."
+  docker exec -i \$DB_CONTAINER psql -U postgres -d mnist_db < ${REMOTE_DIR}/database/init.sql
+  
+  log "Database initialization complete"
+else
+  log "mnist_db database already exists"
+  
+  # Verify the predictions table exists
+  if ! docker exec \$DB_CONTAINER psql -U postgres -d mnist_db -c "\\dt predictions" | grep -q "predictions"; then
+    log "predictions table not found. Creating it..."
+    docker exec -i \$DB_CONTAINER psql -U postgres -d mnist_db < ${REMOTE_DIR}/database/init.sql
+    log "Table creation complete"
+  else
+    log "predictions table already exists"
+  fi
+fi
+
+# Verify the web container can connect to the database
+WEB_CONTAINER=\$(docker ps | grep -E 'web' | grep mnist-digit-recognizer | awk '{print \$1}')
+if [ -n "\$WEB_CONTAINER" ]; then
+  log "Testing database connection from web container..."
+  if docker exec \$WEB_CONTAINER python -c "import psycopg2; psycopg2.connect(host='db', port=5432, dbname='mnist_db', user='postgres', password='postgres')" > /dev/null 2>&1; then
+    log "Connection test successful"
+  else
+    log "Connection test failed. Restarting web container..."
+    docker restart \$WEB_CONTAINER
+    log "Web container restarted"
+  fi
+else
+  log "Web container not running. Starting containers..."
+  docker-compose up -d
+  log "Containers started"
+fi
+
+log "Database check completed"
+EOL
+
+    # Make the script executable
+    chmod +x ${REMOTE_DIR}/server/db_check.sh
+
+    # Create a systemd service for the database check
+    echo "Creating database check service..."
+    cat > /etc/systemd/system/mnist-db-check.service << EOL
+[Unit]
+Description=MNIST Database Check
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=${REMOTE_DIR}/server/db_check.sh
+EOL
+
+    # Create a systemd timer to run the database check every hour and at boot
+    echo "Setting up database check timer..."
+    cat > /etc/systemd/system/mnist-db-check.timer << EOL
+[Unit]
+Description=Run MNIST Database Check regularly
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1h
+
+[Install]
+WantedBy=timers.target
+EOL
+
+    # Enable and start the timer
     systemctl daemon-reload
     systemctl enable mnist-app.service
+    systemctl enable mnist-db-check.timer
+    systemctl start mnist-db-check.timer
     
     echo "Application URL: http://${REMOTE_HOST}:8501"
     echo "Deployment completed successfully!"

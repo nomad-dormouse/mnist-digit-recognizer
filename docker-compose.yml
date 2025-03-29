@@ -41,6 +41,10 @@ services:
       - POSTGRES_DB=mnist_db
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+      # Prevent data loss during container recreation
+      - POSTGRES_INITDB_ARGS=--data-checksums
+      # Add the following environment variable to make init scripts run on each restart
+      - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -50,9 +54,10 @@ services:
       - mnist-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d mnist_db"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
     deploy:
       resources:
         limits:
