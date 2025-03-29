@@ -34,7 +34,7 @@ This project demonstrates an end-to-end machine learning application that:
 ├── database/               # Database schemas and tools
 │   └── init.sql           # Database initialization script
 ├── docker/                 # Docker configuration files
-│   └── docker-compose.yml # Multi-container Docker setup
+│   └── Dockerfile         # Docker container definition
 ├── local/                  # Local development tools and setup
 ├── server/                 # Server management tools
 │   ├── check_web_logs.sh  # Web container logs viewer
@@ -42,6 +42,7 @@ This project demonstrates an end-to-end machine learning application that:
 │   ├── view_db.sh         # Database statistics viewer
 │   └── .env               # Environment variables
 ├── requirements.txt        # Python dependencies
+├── docker-compose.yml     # Multi-container Docker setup
 ```
 
 ## Local Development
