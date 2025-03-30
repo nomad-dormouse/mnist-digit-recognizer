@@ -47,8 +47,11 @@ fi
 # Start deployment
 log_info "Deploying MNIST Digit Recognizer to ${REMOTE_HOST}..."
 
+# Export variables for SSH session
+export REMOTE_DIR REPO_URL
+
 # SSH into the remote server and perform deployment
-ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << 'EOF'
+ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
     # Exit on error
     set -e
     
@@ -73,8 +76,8 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << 'EOF'
     # Set up environment and ensure dependencies
     mkdir -p model/saved_models
     for cmd in docker docker-compose; do
-        if ! command -v $cmd &> /dev/null; then
-            echo "$cmd not found! Please install $cmd first."
+        if ! command -v \$cmd &> /dev/null; then
+            echo "\$cmd not found! Please install \$cmd first."
             exit 1
         fi
     done
@@ -84,8 +87,8 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << 'EOF'
     docker-compose down || true
     
     # Stop any related containers
-    docker ps -a | grep mnist-digit-recognizer | awk '{print $1}' | xargs docker stop 2>/dev/null || true
-    docker ps -a | grep mnist-digit-recognizer | awk '{print $1}' | xargs docker rm -f 2>/dev/null || true
+    docker ps -a | grep mnist-digit-recognizer | awk '{print \$1}' | xargs docker stop 2>/dev/null || true
+    docker ps -a | grep mnist-digit-recognizer | awk '{print \$1}' | xargs docker rm -f 2>/dev/null || true
     
     # Check database volume
     echo "Checking database volume status..."
@@ -109,7 +112,7 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << 'EOF'
     # Wait for database to initialize
     echo "Waiting for database to initialize..."
     for i in {1..30}; do
-        if docker exec $(docker ps | grep postgres | awk '{print $1}') pg_isready -U postgres; then
+        if docker exec \$(docker ps | grep postgres | awk '{print \$1}') pg_isready -U postgres; then
             echo "Database is ready!"
             break
         fi
@@ -118,15 +121,15 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << 'EOF'
     done
     
     # Initialize database if needed
-    DB_CONTAINER=$(docker ps | grep -E 'postgres|db' | awk '{print $1}')
-    if [ -n "${DB_CONTAINER}" ]; then
-        if ! docker exec ${DB_CONTAINER} psql -U postgres -lqt | grep -qw "mnist_db"; then
+    DB_CONTAINER=\$(docker ps | grep -E 'postgres|db' | awk '{print \$1}')
+    if [ -n "\${DB_CONTAINER}" ]; then
+        if ! docker exec \${DB_CONTAINER} psql -U postgres -lqt | grep -qw "mnist_db"; then
             echo "Creating 'mnist_db' database..."
-            docker exec ${DB_CONTAINER} psql -U postgres -c "CREATE DATABASE mnist_db;"
+            docker exec \${DB_CONTAINER} psql -U postgres -c "CREATE DATABASE mnist_db;"
         fi
         
         echo "Initializing database schema..."
-        docker exec -i ${DB_CONTAINER} psql -U postgres -d mnist_db < database/init.sql
+        docker exec -i \${DB_CONTAINER} psql -U postgres -d mnist_db < database/init.sql
     else
         echo "ERROR: Database container not found!"
         exit 1
@@ -247,7 +250,7 @@ Requires=docker.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/root/mnist-digit-recognizer
+WorkingDirectory=${REMOTE_DIR}
 ExecStart=docker-compose up -d
 ExecStop=docker-compose down
 TimeoutStartSec=0
@@ -290,7 +293,7 @@ EOL
     # Run initial check
     /usr/local/bin/check_mnist_db
     
-    echo "Application deployed successfully at http://37.27.197.79:8501"
+    echo "Application deployed successfully at http://${REMOTE_HOST}:8501"
 EOF
 
 # Check deployment result
