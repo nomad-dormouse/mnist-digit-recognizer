@@ -48,7 +48,7 @@ fi
 log_info "Deploying MNIST Digit Recognizer to ${REMOTE_HOST}..."
 
 # SSH into the remote server and perform deployment
-ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
+ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << 'EOF'
     # Exit on error
     set -e
     
@@ -73,8 +73,8 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
     # Set up environment and ensure dependencies
     mkdir -p model/saved_models
     for cmd in docker docker-compose; do
-        if ! command -v \$cmd &> /dev/null; then
-            echo "\$cmd not found! Please install \$cmd first."
+        if ! command -v $cmd &> /dev/null; then
+            echo "$cmd not found! Please install $cmd first."
             exit 1
         fi
     done
@@ -109,7 +109,7 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
     # Wait for database to initialize
     echo "Waiting for database to initialize..."
     for i in {1..30}; do
-        if docker exec \$(docker ps | grep postgres | awk '{print \$1}') pg_isready -U postgres; then
+        if docker exec $(docker ps | grep postgres | awk '{print $1}') pg_isready -U postgres; then
             echo "Database is ready!"
             break
         fi
@@ -118,15 +118,15 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
     done
     
     # Initialize database if needed
-    DB_CONTAINER=\$(docker ps | grep -E 'postgres|db' | awk '{print \$1}')
-    if [ -n "\${DB_CONTAINER}" ]; then
-        if ! docker exec \${DB_CONTAINER} psql -U postgres -lqt | grep -qw "mnist_db"; then
+    DB_CONTAINER=$(docker ps | grep -E 'postgres|db' | awk '{print $1}')
+    if [ -n "${DB_CONTAINER}" ]; then
+        if ! docker exec ${DB_CONTAINER} psql -U postgres -lqt | grep -qw "mnist_db"; then
             echo "Creating 'mnist_db' database..."
-            docker exec \${DB_CONTAINER} psql -U postgres -c "CREATE DATABASE mnist_db;"
+            docker exec ${DB_CONTAINER} psql -U postgres -c "CREATE DATABASE mnist_db;"
         fi
         
         echo "Initializing database schema..."
-        docker exec -i \${DB_CONTAINER} psql -U postgres -d mnist_db < database/init.sql
+        docker exec -i ${DB_CONTAINER} psql -U postgres -d mnist_db < database/init.sql
     else
         echo "ERROR: Database container not found!"
         exit 1
@@ -134,34 +134,34 @@ ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} << EOF
     
     # Create database check script for hourly monitoring
     echo "Setting up database monitoring..."
-    cat > /usr/local/bin/check_mnist_db << EOL
+    cat > /usr/local/bin/check_mnist_db << 'EOLSCRIPT'
 #!/bin/bash
 
 # Log function
-log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] \$1" | tee -a /var/log/mnist_db_check.log; }
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a /var/log/mnist_db_check.log; }
 
 # Backup database if it has records
 backup_database() {
-  local DB_CONTAINER="\$1"
+  local DB_CONTAINER="$1"
   local BACKUP_DIR="/root/db_backups"
-  local BACKUP_FILE="\${BACKUP_DIR}/mnist_db_\$(date '+%Y%m%d_%H%M%S').sql"
+  local BACKUP_FILE="${BACKUP_DIR}/mnist_db_$(date '+%Y%m%d_%H%M%S').sql"
   
-  mkdir -p \${BACKUP_DIR}
-  log "Creating backup to \${BACKUP_FILE}"
-  docker exec \${DB_CONTAINER} pg_dump -U postgres mnist_db > \${BACKUP_FILE}
+  mkdir -p "${BACKUP_DIR}"
+  log "Creating backup to ${BACKUP_FILE}"
+  docker exec "${DB_CONTAINER}" pg_dump -U postgres mnist_db > "${BACKUP_FILE}"
   
   # Keep only the last 7 backups
-  ls -t \${BACKUP_DIR}/mnist_db_*.sql | tail -n +8 | xargs rm -f 2>/dev/null || true
+  ls -t "${BACKUP_DIR}"/mnist_db_*.sql | tail -n +8 | xargs rm -f 2>/dev/null || true
 }
 
 # Restore from latest backup
 restore_latest_backup() {
-  local DB_CONTAINER="\$1"
-  local LATEST_BACKUP=\$(ls -t /root/db_backups/mnist_db_*.sql 2>/dev/null | head -n 1)
+  local DB_CONTAINER="$1"
+  local LATEST_BACKUP=$(ls -t /root/db_backups/mnist_db_*.sql 2>/dev/null | head -n 1)
   
-  if [ -n "\${LATEST_BACKUP}" ]; then
-    log "Restoring from backup: \${LATEST_BACKUP}"
-    docker exec -i \${DB_CONTAINER} psql -U postgres -d mnist_db < \${LATEST_BACKUP}
+  if [ -n "${LATEST_BACKUP}" ]; then
+    log "Restoring from backup: ${LATEST_BACKUP}"
+    docker exec -i "${DB_CONTAINER}" psql -U postgres -d mnist_db < "${LATEST_BACKUP}"
     return 0
   else
     log "No backup files found"
@@ -170,7 +170,7 @@ restore_latest_backup() {
 }
 
 log "Starting database check"
-cd ${REMOTE_DIR}
+cd /root/mnist-digit-recognizer
 
 # Verify Docker is running
 if ! docker info > /dev/null 2>&1; then
@@ -179,49 +179,49 @@ if ! docker info > /dev/null 2>&1; then
 fi
 
 # Ensure database container is running
-DB_CONTAINER=\$(docker ps | grep -E 'postgres|db' | grep mnist-digit-recognizer | awk '{print \$1}')
-if [ -z "\$DB_CONTAINER" ]; then
+DB_CONTAINER=$(docker ps | grep -E 'postgres|db' | grep mnist-digit-recognizer | awk '{print $1}')
+if [ -z "${DB_CONTAINER}" ]; then
   log "Database container not running. Starting containers..."
   docker-compose up -d
   sleep 10
-  DB_CONTAINER=\$(docker ps | grep -E 'postgres|db' | grep mnist-digit-recognizer | awk '{print \$1}')
-  if [ -z "\$DB_CONTAINER" ]; then
+  DB_CONTAINER=$(docker ps | grep -E 'postgres|db' | grep mnist-digit-recognizer | awk '{print $1}')
+  if [ -z "${DB_CONTAINER}" ]; then
     log "Failed to start database container. Exiting."
     exit 1
   fi
 fi
 
 # Backup existing data if any
-if docker exec \$DB_CONTAINER psql -U postgres -lqt | grep -qw "mnist_db"; then
-  if docker exec \$DB_CONTAINER psql -U postgres -d mnist_db -c "\\dt predictions" | grep -q "predictions"; then
-    ROW_COUNT=\$(docker exec \$DB_CONTAINER psql -U postgres -d mnist_db -t -c "SELECT COUNT(*) FROM predictions;" | tr -d '[:space:]')
-    if [ "\$ROW_COUNT" -gt 0 ]; then
-      log "Found \$ROW_COUNT records - creating backup"
-      backup_database "\$DB_CONTAINER"
+if docker exec "${DB_CONTAINER}" psql -U postgres -lqt | grep -qw "mnist_db"; then
+  if docker exec "${DB_CONTAINER}" psql -U postgres -d mnist_db -c "\dt predictions" | grep -q "predictions"; then
+    ROW_COUNT=$(docker exec "${DB_CONTAINER}" psql -U postgres -d mnist_db -t -c "SELECT COUNT(*) FROM predictions;" | tr -d '[:space:]')
+    if [ "${ROW_COUNT}" -gt 0 ]; then
+      log "Found ${ROW_COUNT} records - creating backup"
+      backup_database "${DB_CONTAINER}"
     fi
   fi
 fi
 
 # Verify/create database and tables
-if ! docker exec \$DB_CONTAINER psql -U postgres -lqt | grep -qw "mnist_db"; then
+if ! docker exec "${DB_CONTAINER}" psql -U postgres -lqt | grep -qw "mnist_db"; then
   log "Creating mnist_db database..."
-  docker exec \$DB_CONTAINER psql -U postgres -c "CREATE DATABASE mnist_db;"
+  docker exec "${DB_CONTAINER}" psql -U postgres -c "CREATE DATABASE mnist_db;"
   log "Initializing schema..."
-  docker exec -i \$DB_CONTAINER psql -U postgres -d mnist_db < ${REMOTE_DIR}/database/init.sql
-  restore_latest_backup "\$DB_CONTAINER"
-elif ! docker exec \$DB_CONTAINER psql -U postgres -d mnist_db -c "\\dt predictions" | grep -q "predictions"; then
+  docker exec -i "${DB_CONTAINER}" psql -U postgres -d mnist_db < /root/mnist-digit-recognizer/database/init.sql
+  restore_latest_backup "${DB_CONTAINER}"
+elif ! docker exec "${DB_CONTAINER}" psql -U postgres -d mnist_db -c "\dt predictions" | grep -q "predictions"; then
   log "Creating predictions table..."
-  docker exec -i \$DB_CONTAINER psql -U postgres -d mnist_db < ${REMOTE_DIR}/database/init.sql
-  restore_latest_backup "\$DB_CONTAINER"
+  docker exec -i "${DB_CONTAINER}" psql -U postgres -d mnist_db < /root/mnist-digit-recognizer/database/init.sql
+  restore_latest_backup "${DB_CONTAINER}"
 fi
 
 # Verify web container connection
-WEB_CONTAINER=\$(docker ps | grep -E 'web' | grep mnist-digit-recognizer | awk '{print \$1}')
-if [ -n "\$WEB_CONTAINER" ]; then
+WEB_CONTAINER=$(docker ps | grep -E 'web' | grep mnist-digit-recognizer | awk '{print $1}')
+if [ -n "${WEB_CONTAINER}" ]; then
   log "Testing database connection from web container..."
-  if ! docker exec \$WEB_CONTAINER python -c "import psycopg2; conn = psycopg2.connect(host='db', port=5432, dbname='mnist_db', user='postgres', password='postgres'); print('Connection successful'); conn.close()" | grep -q "Connection successful"; then
+  if ! docker exec "${WEB_CONTAINER}" python -c "import psycopg2; conn = psycopg2.connect(host='db', port=5432, dbname='mnist_db', user='postgres', password='postgres'); print('Connection successful'); conn.close()" | grep -q "Connection successful"; then
     log "Connection failed. Restarting web container..."
-    docker restart \$WEB_CONTAINER
+    docker restart "${WEB_CONTAINER}"
   fi
 else
   log "Starting web container..."
@@ -229,7 +229,7 @@ else
 fi
 
 log "Database check completed"
-EOL
+EOLSCRIPT
 
     # Make the script executable
     chmod +x /usr/local/bin/check_mnist_db
@@ -247,7 +247,7 @@ Requires=docker.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=${REMOTE_DIR}
+WorkingDirectory=/root/mnist-digit-recognizer
 ExecStart=docker-compose up -d
 ExecStop=docker-compose down
 TimeoutStartSec=0
@@ -290,7 +290,7 @@ EOL
     # Run initial check
     /usr/local/bin/check_mnist_db
     
-    echo "Application deployed successfully at http://${REMOTE_HOST}:8501"
+    echo "Application deployed successfully at http://37.27.197.79:8501"
 EOF
 
 # Check deployment result
