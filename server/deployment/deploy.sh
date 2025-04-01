@@ -102,18 +102,5 @@ REMOTESCRIPT
     fi
 }
 
-# Update existing repository
-update_repository() {
-    log "Updating existing repository..."
-    if ! ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "cd '${REMOTE_DIR}' && \
-        git fetch origin && \
-        git reset --hard origin/master && \
-        git clean -fd"; then
-        log_error "Failed to update repository"
-        return 1
-    fi
-    log_success "Repository updated successfully"
-}
-
 # Run main function
 main 
