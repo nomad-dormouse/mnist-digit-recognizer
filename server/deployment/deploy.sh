@@ -17,8 +17,10 @@
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$(dirname "${SCRIPT_DIR}")")"
 
 # Source all required scripts
+source "${PROJECT_ROOT}/.env"
 source "${SCRIPT_DIR}/common.sh"
 source "${SCRIPT_DIR}/environment.sh"
 source "${SCRIPT_DIR}/database.sh"
@@ -40,8 +42,13 @@ main() {
     
     log_info "Copying deployment files..."
     scp -i "${SSH_KEY}" \
-        "${SCRIPT_DIR}"/{common.sh,environment.sh,database.sh,containers.sh,services.sh,.env} \
+        "${SCRIPT_DIR}"/{common.sh,environment.sh,database.sh,containers.sh,services.sh} \
         "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/server/deployment/"
+    
+    log_info "Copying configuration files..."
+    scp -i "${SSH_KEY}" \
+        "${PROJECT_ROOT}/.env" \
+        "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
     
     log_info "Copying application files..."
     scp -i "${SSH_KEY}" \
