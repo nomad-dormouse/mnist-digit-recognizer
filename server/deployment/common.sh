@@ -40,9 +40,6 @@ load_env() {
     done
 }
 
-# Load environment variables
-load_env
-
 # ======================
 # Common Configuration
 # ======================
@@ -53,28 +50,83 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'  # No Color
 
-# Log file setup
-LOG_DIR="$(dirname "${BASH_SOURCE[0]}")/logs"
-LOG_FILE="${LOG_DIR}/mnist_deploy.log"
-
-# Create log directory if it doesn't exist
-mkdir -p "${LOG_DIR}" || {
-    echo "Error: Could not create log directory at ${LOG_DIR}"
-    # If we can't create the log directory, set LOG_FILE to /dev/null
-    # This ensures the script can continue without logging to file
-    LOG_FILE="/dev/null"
+# Initialize logging
+setup_logging() {
+    # Check if we're on the remote server
+    if [[ "$(hostname)" == "${REMOTE_HOST}" ]]; then
+        # On remote server, use the deployment directory
+        LOG_DIR="${REMOTE_DIR}/server/deployment/logs"
+    else
+        # Locally, use the script's directory
+        LOG_DIR="$(dirname "${BASH_SOURCE[0]}")/logs"
+    fi
+    
+    # Set log file path
+    LOG_FILE="${LOG_DIR}/mnist_deploy.log"
+    
+    # Create log directory if it doesn't exist
+    mkdir -p "${LOG_DIR}" 2>/dev/null || {
+        echo "Warning: Could not create log directory at ${LOG_DIR}"
+        # If we can't create the log directory, log only to console
+        LOG_TO_FILE=false
+        return
+    }
+    
+    # Check if we can write to the log file
+    touch "${LOG_FILE}" 2>/dev/null || {
+        echo "Warning: Cannot write to log file at ${LOG_FILE}"
+        # If we can't write to the log file, log only to console
+        LOG_TO_FILE=false
+        return
+    }
+    
+    LOG_TO_FILE=true
 }
+
+# Load environment variables first
+load_env
+
+# Setup logging
+setup_logging
 
 # ======================
 # Common Functions
 # ======================
 log() { 
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    echo "[${timestamp}] $1" | tee -a "${LOG_FILE}"
+    local message="[${timestamp}] $1"
+    echo "${message}"
+    if [[ "${LOG_TO_FILE}" == "true" ]]; then
+        echo "${message}" >> "${LOG_FILE}"
+    fi
 }
-log_info() { echo -e "${YELLOW}[INFO] $1${NC}" | tee -a "${LOG_FILE}"; }
-log_success() { echo -e "${GREEN}[SUCCESS] $1${NC}" | tee -a "${LOG_FILE}"; }
-log_error() { echo -e "${RED}[ERROR] $1${NC}" | tee -a "${LOG_FILE}"; }
+
+log_info() { 
+    local message="${YELLOW}[INFO] $1${NC}"
+    echo -e "${message}"
+    if [[ "${LOG_TO_FILE}" == "true" ]]; then
+        # Strip color codes for file logging
+        echo "[INFO] $1" >> "${LOG_FILE}"
+    fi
+}
+
+log_success() { 
+    local message="${GREEN}[SUCCESS] $1${NC}"
+    echo -e "${message}"
+    if [[ "${LOG_TO_FILE}" == "true" ]]; then
+        # Strip color codes for file logging
+        echo "[SUCCESS] $1" >> "${LOG_FILE}"
+    fi
+}
+
+log_error() { 
+    local message="${RED}[ERROR] $1${NC}"
+    echo -e "${message}"
+    if [[ "${LOG_TO_FILE}" == "true" ]]; then
+        # Strip color codes for file logging
+        echo "[ERROR] $1" >> "${LOG_FILE}"
+    fi
+}
 
 # Check if running on remote server
 is_remote() {
