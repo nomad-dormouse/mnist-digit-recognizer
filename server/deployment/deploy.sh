@@ -38,6 +38,11 @@ main() {
     log_info "Setting up remote deployment directory..."
     ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p ${REMOTE_DIR}/server/deployment"
     
+    log_info "Copying deployment files..."
+    scp -i "${SSH_KEY}" \
+        "${SCRIPT_DIR}"/{common.sh,environment.sh,database.sh,containers.sh,services.sh,.env} \
+        "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/server/deployment/"
+    
     # Execute remote deployment
     if ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "$(cat << REMOTESCRIPT
         # Strict error handling
@@ -52,29 +57,11 @@ main() {
         export WEB_CONTAINER_NAME='${WEB_CONTAINER_NAME}'
         export DB_CONTAINER_NAME='${DB_CONTAINER_NAME}'
         
-        # Clean up existing deployment files if they exist
-        if [ -d "${REMOTE_DIR}/server/deployment" ]; then
-            mv "${REMOTE_DIR}/server/deployment" "${REMOTE_DIR}/server/deployment.bak"
-        fi
-        
-        # Update repository
-        cd "${REMOTE_DIR}"
-        git fetch origin
-        git reset --hard origin/master
-        
-        # Restore .env file if it existed
-        if [ -f "${REMOTE_DIR}/server/deployment.bak/.env" ]; then
-            cp "${REMOTE_DIR}/server/deployment.bak/.env" "${REMOTE_DIR}/server/deployment/.env"
-        else
-            # Copy new .env file
-            scp -i "${SSH_KEY}" "${SCRIPT_DIR}/.env" "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/server/deployment/.env"
-        fi
-        
-        # Clean up backup
-        rm -rf "${REMOTE_DIR}/server/deployment.bak"
+        # Create logs directory first
+        mkdir -p '${REMOTE_DIR}/server/deployment/logs'
         
         # Change to deployment directory
-        cd "${REMOTE_DIR}/server/deployment"
+        cd '${REMOTE_DIR}/server/deployment'
         
         # Source all required scripts
         source ./common.sh
