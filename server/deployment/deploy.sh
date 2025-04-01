@@ -12,7 +12,7 @@
 # - containers.sh: Docker container management
 # - services.sh: Systemd services setup
 #
-# Usage: ./server/deployment/deploy.sh
+# Usage: ./deploy.sh
 # ================================================================================
 
 # Get the directory where this script is located
@@ -34,13 +34,49 @@ main() {
     # Check prerequisites locally
     check_prerequisites
     
+    # Create remote directories and copy deployment files
+    log_info "Setting up remote deployment directory..."
+    ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p ${REMOTE_DIR}/server/deployment"
+    
     # Execute remote deployment
-    if ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "$(cat << 'REMOTESCRIPT'
+    if ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "$(cat << REMOTESCRIPT
         # Strict error handling
         set -euo pipefail
         
+        # Export environment variables
+        export REMOTE_DIR='${REMOTE_DIR}'
+        export DB_NAME='${DB_NAME}'
+        export DB_USER='${DB_USER}'
+        export DB_PASSWORD='${DB_PASSWORD}'
+        export DB_PORT='${DB_PORT}'
+        export WEB_CONTAINER_NAME='${WEB_CONTAINER_NAME}'
+        export DB_CONTAINER_NAME='${DB_CONTAINER_NAME}'
+        
+        # Clean up existing deployment files if they exist
+        if [ -d "${REMOTE_DIR}/server/deployment" ]; then
+            mv "${REMOTE_DIR}/server/deployment" "${REMOTE_DIR}/server/deployment.bak"
+        fi
+        
+        # Update repository
+        cd "${REMOTE_DIR}"
+        git fetch origin
+        git reset --hard origin/master
+        
+        # Restore .env file if it existed
+        if [ -f "${REMOTE_DIR}/server/deployment.bak/.env" ]; then
+            cp "${REMOTE_DIR}/server/deployment.bak/.env" "${REMOTE_DIR}/server/deployment/.env"
+        else
+            # Copy new .env file
+            scp -i "${SSH_KEY}" "${SCRIPT_DIR}/.env" "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/server/deployment/.env"
+        fi
+        
+        # Clean up backup
+        rm -rf "${REMOTE_DIR}/server/deployment.bak"
+        
+        # Change to deployment directory
+        cd "${REMOTE_DIR}/server/deployment"
+        
         # Source all required scripts
-        cd /root/mnist-digit-recognizer/server/deployment
         source ./common.sh
         source ./environment.sh
         source ./database.sh

@@ -53,13 +53,20 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'  # No Color
 
+# Log file setup
+LOG_DIR="$(dirname "${BASH_SOURCE[0]}")/logs"
+LOG_FILE="${LOG_DIR}/mnist_deploy.log"
+
+# Create log directory if it doesn't exist
+mkdir -p "${LOG_DIR}"
+
 # ======================
 # Common Functions
 # ======================
-log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a /var/log/mnist_deploy.log; }
-log_info() { echo -e "${YELLOW}[INFO] $1${NC}"; }
-log_success() { echo -e "${GREEN}[SUCCESS] $1${NC}"; }
-log_error() { echo -e "${RED}[ERROR] $1${NC}"; }
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "${LOG_FILE}"; }
+log_info() { echo -e "${YELLOW}[INFO] $1${NC}" | tee -a "${LOG_FILE}"; }
+log_success() { echo -e "${GREEN}[SUCCESS] $1${NC}" | tee -a "${LOG_FILE}"; }
+log_error() { echo -e "${RED}[ERROR] $1${NC}" | tee -a "${LOG_FILE}"; }
 
 # Check if running on remote server
 is_remote() {
