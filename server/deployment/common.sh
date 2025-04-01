@@ -1,18 +1,49 @@
 #!/bin/bash
 
-# ======================
-# Load Environment Variables
-# ======================
+# ================================================================================
+# MNIST Digit Recognizer - Common Functions
+# ================================================================================
+# This script contains shared functions and variables used across deployment scripts.
+# It handles logging, environment variables, and common utilities.
+# ================================================================================
+
+# Terminal color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Initialize logging
+setup_logging() {
+    # Determine if we're running locally or remotely
+    if [ -n "${REMOTE_DIR:-}" ]; then
+        # Remote environment
+        LOG_DIR="${REMOTE_DIR}/server/deployment/logs"
+    else
+        # Local environment
+        LOG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/logs"
+    fi
+    
+    # Create logs directory if it doesn't exist
+    if ! mkdir -p "${LOG_DIR}"; then
+        echo "Warning: Could not create log directory at ${LOG_DIR}" >&2
+        LOG_FILE="/dev/null"
+    else
+        LOG_FILE="${LOG_DIR}/mnist_deploy.log"
+    fi
+}
+
+# Load environment variables from .env file
 load_env() {
-    local env_file
-    env_file="$(dirname "${BASH_SOURCE[0]}")/.env"
+    local env_file="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env"
     
     if [ ! -f "${env_file}" ]; then
-        echo "Error: .env file not found at ${env_file}"
+        echo "Error: .env file not found at ${env_file}" >&2
         exit 1
     fi
     
-    # Load variables from .env file
+    # Load environment variables
     set -a
     source "${env_file}"
     set +a
@@ -33,12 +64,49 @@ load_env() {
     )
     
     for var in "${required_vars[@]}"; do
-        if [ -z "${!var}" ]; then
-            echo "Error: Required variable ${var} is not set in ${env_file}"
+        if [ -z "${!var:-}" ]; then
+            echo "Error: Required environment variable ${var} is not set" >&2
             exit 1
         fi
     done
 }
+
+# Logging functions
+log() {
+    local level="$1"
+    shift
+    local message="$*"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local log_entry="[${timestamp}] ${level}: ${message}"
+    
+    # Always output to console
+    case "${level}" in
+        "ERROR") echo -e "${RED}${log_entry}${NC}" ;;
+        "SUCCESS") echo -e "${GREEN}${log_entry}${NC}" ;;
+        "WARNING") echo -e "${YELLOW}${log_entry}${NC}" ;;
+        "INFO") echo -e "${BLUE}${log_entry}${NC}" ;;
+        *) echo "${log_entry}" ;;
+    esac
+    
+    # Try to write to log file if it exists
+    if [ -n "${LOG_FILE:-}" ] && [ "${LOG_FILE}" != "/dev/null" ]; then
+        echo "${log_entry}" >> "${LOG_FILE}" 2>/dev/null || true
+    fi
+}
+
+log_info() { log "INFO" "$*"; }
+log_success() { log "SUCCESS" "$*"; }
+log_warning() { log "WARNING" "$*"; }
+log_error() { log "ERROR" "$*"; }
+
+# Load environment variables first
+load_env
+
+# Then set up logging
+setup_logging
+
+# Log script initialization
+log_info "Initializing deployment scripts..."
 
 # ======================
 # Common Configuration
@@ -49,84 +117,6 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'  # No Color
-
-# Initialize logging
-setup_logging() {
-    # Check if we're on the remote server
-    if [[ "$(hostname)" == "${REMOTE_HOST}" ]]; then
-        # On remote server, use the deployment directory
-        LOG_DIR="${REMOTE_DIR}/server/deployment/logs"
-    else
-        # Locally, use the script's directory
-        LOG_DIR="$(dirname "${BASH_SOURCE[0]}")/logs"
-    fi
-    
-    # Set log file path
-    LOG_FILE="${LOG_DIR}/mnist_deploy.log"
-    
-    # Create log directory if it doesn't exist
-    mkdir -p "${LOG_DIR}" 2>/dev/null || {
-        echo "Warning: Could not create log directory at ${LOG_DIR}"
-        # If we can't create the log directory, log only to console
-        LOG_TO_FILE=false
-        return
-    }
-    
-    # Check if we can write to the log file
-    touch "${LOG_FILE}" 2>/dev/null || {
-        echo "Warning: Cannot write to log file at ${LOG_FILE}"
-        # If we can't write to the log file, log only to console
-        LOG_TO_FILE=false
-        return
-    }
-    
-    LOG_TO_FILE=true
-}
-
-# Load environment variables first
-load_env
-
-# Setup logging
-setup_logging
-
-# ======================
-# Common Functions
-# ======================
-log() { 
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    local message="[${timestamp}] $1"
-    echo "${message}"
-    if [[ "${LOG_TO_FILE}" == "true" ]]; then
-        echo "${message}" >> "${LOG_FILE}"
-    fi
-}
-
-log_info() { 
-    local message="${YELLOW}[INFO] $1${NC}"
-    echo -e "${message}"
-    if [[ "${LOG_TO_FILE}" == "true" ]]; then
-        # Strip color codes for file logging
-        echo "[INFO] $1" >> "${LOG_FILE}"
-    fi
-}
-
-log_success() { 
-    local message="${GREEN}[SUCCESS] $1${NC}"
-    echo -e "${message}"
-    if [[ "${LOG_TO_FILE}" == "true" ]]; then
-        # Strip color codes for file logging
-        echo "[SUCCESS] $1" >> "${LOG_FILE}"
-    fi
-}
-
-log_error() { 
-    local message="${RED}[ERROR] $1${NC}"
-    echo -e "${message}"
-    if [[ "${LOG_TO_FILE}" == "true" ]]; then
-        # Strip color codes for file logging
-        echo "[ERROR] $1" >> "${LOG_FILE}"
-    fi
-}
 
 # Check if running on remote server
 is_remote() {
