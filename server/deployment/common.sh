@@ -18,17 +18,28 @@ NC='\033[0m' # No Color
 setup_logging() {
     # Determine if we're running locally or remotely
     if [ -n "${REMOTE_DIR:-}" ]; then
-        # Remote environment
-        LOG_DIR="${REMOTE_DIR}/server/deployment/logs"
+        # Remote environment - use /var/log for system-wide logs
+        LOG_DIR="/var/log/mnist-digit-recognizer"
     else
-        # Local environment
+        # Local environment - use script's directory
         LOG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/logs"
     fi
     
     # Create logs directory if it doesn't exist
-    if ! mkdir -p "${LOG_DIR}"; then
-        echo "Warning: Could not create log directory at ${LOG_DIR}" >&2
-        LOG_FILE="/dev/null"
+    if ! mkdir -p "${LOG_DIR}" 2>/dev/null; then
+        # If we can't create in /var/log, try user's home directory
+        if [ -n "${REMOTE_DIR:-}" ]; then
+            LOG_DIR="${HOME}/.mnist-digit-recognizer/logs"
+            if ! mkdir -p "${LOG_DIR}" 2>/dev/null; then
+                echo "Warning: Could not create log directory at ${LOG_DIR}" >&2
+                LOG_FILE="/dev/null"
+            else
+                LOG_FILE="${LOG_DIR}/mnist_deploy.log"
+            fi
+        else
+            echo "Warning: Could not create log directory at ${LOG_DIR}" >&2
+            LOG_FILE="/dev/null"
+        fi
     else
         LOG_FILE="${LOG_DIR}/mnist_deploy.log"
     fi
