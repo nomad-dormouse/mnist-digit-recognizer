@@ -34,7 +34,7 @@ services:
 
   # Database Service
   db:
-    image: postgres:13
+    image: postgres:${DB_VERSION}
     restart: unless-stopped
     container_name: ${DB_CONTAINER_NAME}
     environment:
@@ -73,6 +73,6 @@ networks:
 
 # Volume Configuration
 volumes:
-  postgres_data:
+  ${DB_VOLUME_NAME}:
     name: ${DB_VOLUME_NAME}
     driver: local 
