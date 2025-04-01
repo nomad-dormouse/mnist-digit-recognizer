@@ -65,13 +65,13 @@ echo -e "${YELLOW}Starting database container...${NC}"
 docker run -d --name "${DB_CONTAINER_NAME}" \
     --network "${NETWORK_NAME}" \
     -p "${DB_PORT}:${DB_PORT}" \
-    -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
-    -e POSTGRES_USER="${POSTGRES_USER}" \
-    -e POSTGRES_DB="${POSTGRES_DB}" \
+    -e POSTGRES_PASSWORD="${DB_PASSWORD}" \
+    -e POSTGRES_USER="${DB_USER}" \
+    -e POSTGRES_DB="${DB_NAME}" \
     -e POSTGRES_INITDB_ARGS="${POSTGRES_INITDB_ARGS}" \
     -e PGDATA="${PGDATA}" \
     -v "${DB_VOLUME_NAME}:/var/lib/postgresql/data" \
-    postgres:13
+    postgres:${DB_VERSION}
 
 # Wait for database to be ready
 echo -e "${YELLOW}Waiting for database to initialize...${NC}"
