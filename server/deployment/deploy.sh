@@ -43,6 +43,11 @@ main() {
         "${SCRIPT_DIR}"/{common.sh,environment.sh,database.sh,containers.sh,services.sh,.env} \
         "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/server/deployment/"
     
+    log_info "Copying application files..."
+    scp -i "${SSH_KEY}" \
+        docker-compose.yml \
+        "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
+    
     # Execute remote deployment
     if ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "$(cat << REMOTESCRIPT
         # Strict error handling
@@ -56,6 +61,7 @@ main() {
         export DB_PORT='${DB_PORT}'
         export WEB_CONTAINER_NAME='${WEB_CONTAINER_NAME}'
         export DB_CONTAINER_NAME='${DB_CONTAINER_NAME}'
+        export DOCKER_COMPOSE_FILE='${REMOTE_DIR}/docker-compose.yml'
         
         # Create logs directory first
         mkdir -p '${REMOTE_DIR}/server/deployment/logs'
