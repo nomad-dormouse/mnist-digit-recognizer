@@ -49,7 +49,9 @@ setup_environment() {
     if [ -d "${REMOTE_DIR}" ]; then
         log "Updating existing repository..."
         cd "${REMOTE_DIR}" || exit 1
-        git pull
+        git fetch origin && \
+        git reset --hard origin/master && \
+        git clean -fd
     else
         log "Cloning repository..."
         mkdir -p "${REMOTE_DIR}"
