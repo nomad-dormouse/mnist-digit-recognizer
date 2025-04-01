@@ -26,23 +26,15 @@ This project demonstrates an end-to-end machine learning application that:
 ## Project Structure
 
 ```
-.
-├── app/                    # Streamlit web application
-├── model/                  # PyTorch model and training code
-│   ├── data/               # Training data directory
-│   └── saved_models/       # Saved model weights
-├── database/               # Database schemas and tools
-│   └── init.sql           # Database initialization script
-├── docker/                 # Docker configuration files
-│   └── Dockerfile         # Docker container definition
-├── local/                  # Local development tools and setup
-├── server/                 # Server management tools
-│   ├── check_web_logs.sh  # Web container logs viewer
-│   ├── deploy.sh          # Deployment script
-│   ├── view_db.sh         # Database statistics viewer
-│   └── .env               # Environment variables
-├── requirements.txt        # Python dependencies
-├── docker-compose.yml     # Multi-container Docker setup
+project_root/
+├── app/                # Application code
+├── model/             # Model training and inference
+├── docker/            # Docker configuration
+├── local/            # Local development setup
+│   └── .env.local    # Local environment variables
+└── server/           # Server-side components
+    └── deployment/   # Deployment configuration
+        └── .env     # Production environment variables
 ```
 
 ## Local Development

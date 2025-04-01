@@ -32,14 +32,16 @@ htmlcov/
 # Virtual Environment
 # ================================================================================
 venv/
-ENV/
-env/
 .venv
-env.bak/
 venv.bak/
-# .env is tracked for production settings
-!.env
+
+# Environment files
 .env.local
+server/deployment/.env
+
+# Keep environment templates
+!local/.env.local.template
+!server/deployment/.env.template
 
 # ================================================================================
 # IDE and Editors
