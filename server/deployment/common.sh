@@ -47,7 +47,9 @@ setup_logging() {
 
 # Load environment variables from .env file
 load_env() {
-    local env_file="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.env"
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local project_root="$(dirname "$(dirname "${script_dir}")")"
+    local env_file="${project_root}/.env"
     
     if [ ! -f "${env_file}" ]; then
         echo "Error: .env file not found at ${env_file}" >&2
