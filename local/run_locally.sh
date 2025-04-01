@@ -64,18 +64,19 @@ docker network create "${NETWORK_NAME}"
 echo -e "${YELLOW}Starting database container...${NC}"
 docker run -d --name "${DB_CONTAINER_NAME}" \
     --network "${NETWORK_NAME}" \
-    -p "${DB_PORT}:${DB_PORT}" \
+    --network-alias db \
+    -p "${DB_PORT}:5432" \
     -e POSTGRES_PASSWORD="${DB_PASSWORD}" \
     -e POSTGRES_USER="${DB_USER}" \
     -e POSTGRES_DB="${DB_NAME}" \
-    -e POSTGRES_INITDB_ARGS="${POSTGRES_INITDB_ARGS}" \
-    -e PGDATA="${PGDATA}" \
+    -e POSTGRES_INITDB_ARGS="--data-checksums" \
+    -e PGDATA="/var/lib/postgresql/data/pgdata" \
     -v "${DB_VOLUME_NAME}:/var/lib/postgresql/data" \
     postgres:${DB_VERSION}
 
 # Wait for database to be ready
 echo -e "${YELLOW}Waiting for database to initialize...${NC}"
-for i in {1..20}; do
+for i in {1..30}; do
     if docker exec "${DB_CONTAINER_NAME}" pg_isready -U "${DB_USER}" &>/dev/null; then
         echo -e "${GREEN}Database is ready!${NC}"
         break
@@ -83,8 +84,9 @@ for i in {1..20}; do
     echo -n "."
     sleep 1
     
-    if [ $i -eq 20 ]; then
-        echo -e "\n${RED}Database did not initialize in time. Please check for errors.${NC}"
+    if [ $i -eq 30 ]; then
+        echo -e "\n${RED}Database did not initialize in time. Please check for errors:${NC}"
+        docker logs "${DB_CONTAINER_NAME}"
         exit 1
     fi
 done
@@ -107,8 +109,8 @@ docker run -d --name "${WEB_CONTAINER_NAME}" \
     --network "${NETWORK_NAME}" \
     -p "${APP_PORT}:${APP_PORT}" \
     -v "${PROJECT_ROOT}/model/saved_models:/app/model/saved_models:ro" \
-    -e DB_HOST="${DB_HOST}" \
-    -e DB_PORT="${DB_PORT}" \
+    -e DB_HOST="db" \
+    -e DB_PORT="5432" \
     -e DB_NAME="${DB_NAME}" \
     -e DB_USER="${DB_USER}" \
     -e DB_PASSWORD="${DB_PASSWORD}" \
