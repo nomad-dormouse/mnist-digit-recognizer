@@ -46,7 +46,7 @@ services:
       # Add the following environment variable to make init scripts run on each restart
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
-      - ${DB_VOLUME_NAME}:/var/lib/postgresql/data
+      - mnist-digit-recognizer-db-volume:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "${DB_PORT}:5432"
@@ -73,6 +73,5 @@ networks:
 
 # Volume Configuration
 volumes:
-  ${DB_VOLUME_NAME}:
-    name: ${DB_VOLUME_NAME}
+  mnist-digit-recognizer-db-volume:
     driver: local 
