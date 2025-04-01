@@ -58,12 +58,20 @@ LOG_DIR="$(dirname "${BASH_SOURCE[0]}")/logs"
 LOG_FILE="${LOG_DIR}/mnist_deploy.log"
 
 # Create log directory if it doesn't exist
-mkdir -p "${LOG_DIR}"
+mkdir -p "${LOG_DIR}" || {
+    echo "Error: Could not create log directory at ${LOG_DIR}"
+    # If we can't create the log directory, set LOG_FILE to /dev/null
+    # This ensures the script can continue without logging to file
+    LOG_FILE="/dev/null"
+}
 
 # ======================
 # Common Functions
 # ======================
-log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "${LOG_FILE}"; }
+log() { 
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[${timestamp}] $1" | tee -a "${LOG_FILE}"
+}
 log_info() { echo -e "${YELLOW}[INFO] $1${NC}" | tee -a "${LOG_FILE}"; }
 log_success() { echo -e "${GREEN}[SUCCESS] $1${NC}" | tee -a "${LOG_FILE}"; }
 log_error() { echo -e "${RED}[ERROR] $1${NC}" | tee -a "${LOG_FILE}"; }
