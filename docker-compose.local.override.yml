@@ -1,0 +1,19 @@
+services:
+  web:
+    build:
+      dockerfile: local/Dockerfile.local
+    container_name: ${WEB_CONTAINER_NAME}
+    environment:
+      - MODEL_PATH=/app/model/saved_models/mnist_model.pth
+    volumes:
+      - ./model/saved_models:/app/model/saved_models:ro
+
+  db:
+    container_name: ${DB_CONTAINER_NAME}
+    volumes:
+      - mnist-digit-recognizer-db-volume:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+volumes:
+  db-data:
+    name: mnist-digit-recognizer-db-volume 

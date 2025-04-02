@@ -6,37 +6,23 @@ services:
   web:
     build:
       context: .
-      dockerfile: docker/Dockerfile
-    restart: unless-stopped
-    container_name: ${WEB_CONTAINER_NAME}
     ports:
       - "${APP_PORT}:8501"
-    depends_on:
-      - db
     environment:
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
+      - DB_HOST=db
+      - DB_PORT=5432
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - PYTHONUNBUFFERED=1
     volumes:
       - ./model/saved_models:/app/model/saved_models:ro
-    networks:
-      - mnist-network
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          memory: 512M
+    depends_on:
+      - db
 
   # Database Service
   db:
     image: postgres:${DB_VERSION}
-    restart: unless-stopped
-    container_name: ${DB_CONTAINER_NAME}
     environment:
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USER}
@@ -45,26 +31,17 @@ services:
       - POSTGRES_INITDB_ARGS=--data-checksums
       # Add the following environment variable to make init scripts run on each restart
       - PGDATA=/var/lib/postgresql/data/pgdata
-    volumes:
-      - mnist-digit-recognizer-db-volume:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "${DB_PORT}:5432"
-    networks:
-      - mnist-network
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-        reservations:
-          memory: 256M
 
 # Network Configuration
 networks:
@@ -73,5 +50,6 @@ networks:
 
 # Volume Configuration
 volumes:
+  db-data:
   mnist-digit-recognizer-db-volume:
     driver: local 

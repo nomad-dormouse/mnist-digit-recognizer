@@ -1,119 +1,90 @@
 #!/bin/bash
 
 # ================================================================================
-# MNIST Digit Recognizer - Main Deployment Script
+# PRODUCTION DEPLOYMENT SCRIPT
 # ================================================================================
-# This script handles the complete deployment process for the MNIST application.
-# It uses a modular approach with separate scripts for different functionalities:
+# This script deploys the MNIST Digit Recognizer app in production mode.
+# 
+# Usage:
+#   ./server/deployment/deploy.sh
 #
-# - common.sh: Shared functions and variables
-# - environment.sh: Environment setup and prerequisites
-# - database.sh: Database management and health checks
-# - containers.sh: Docker container management
-# - services.sh: Systemd services setup
+# Requirements:
+#   - Docker and Docker Compose installed
+#   - .env file in server/deployment directory
+#   - Trained model in model/saved_models/mnist_model.pth
 #
-# Usage: ./deploy.sh
+# Notes:
+#   - Run this script from the project root directory
+#   - The web interface will be available at http://your-server:8501
 # ================================================================================
+
+# Colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$(dirname "${SCRIPT_DIR}")")"
 
-# Source all required scripts
-source "${PROJECT_ROOT}/.env"
-source "${SCRIPT_DIR}/common.sh"
-source "${SCRIPT_DIR}/environment.sh"
-source "${SCRIPT_DIR}/database.sh"
-source "${SCRIPT_DIR}/containers.sh"
-source "${SCRIPT_DIR}/services.sh"
+# Load environment variables
+if [ -f "${SCRIPT_DIR}/.env" ]; then
+    echo -e "${GREEN}Loading environment variables from .env...${NC}"
+    set -a
+    source "${SCRIPT_DIR}/.env"
+    set +a
+else
+    echo -e "${RED}Error: .env file not found in ${SCRIPT_DIR}${NC}"
+    echo -e "${YELLOW}Please create .env from .env.template${NC}"
+    exit 1
+fi
 
-# ======================
-# Main Deployment
-# ======================
-main() {
-    log_info "Starting deployment to ${REMOTE_HOST}..."
+# Check if model file exists
+MODEL_FILE="${PROJECT_ROOT}/model/saved_models/mnist_model.pth"
+if [ ! -f "${MODEL_FILE}" ]; then
+    echo -e "${RED}Error: Model file not found at ${MODEL_FILE}${NC}"
+    exit 1
+fi
+
+# Define Docker Compose files
+COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.override.yml"
+
+# Clean up existing resources
+echo -e "${YELLOW}Cleaning up existing resources...${NC}"
+cd "${PROJECT_ROOT}"
+
+# Stop and remove any previous Docker Compose setup
+echo -e "${YELLOW}Stopping existing containers...${NC}"
+docker compose ${COMPOSE_FILES} down --remove-orphans
+
+# Start services
+echo -e "${YELLOW}Starting services...${NC}"
+docker compose ${COMPOSE_FILES} up -d --build
+
+# Wait for database to be ready
+echo -e "${YELLOW}Waiting for database to initialize...${NC}"
+for i in {1..60}; do
+    if docker compose ${COMPOSE_FILES} exec db pg_isready -U "${DB_USER}" &>/dev/null; then
+        echo -e "${GREEN}Database is ready!${NC}"
+        break
+    fi
+    echo -n "."
+    sleep 2
     
-    # Check prerequisites locally
-    check_prerequisites
-    
-    # Create remote directories and copy deployment files
-    log_info "Setting up remote deployment directory..."
-    ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p ${REMOTE_DIR}/server/deployment"
-    
-    log_info "Copying deployment files..."
-    scp -i "${SSH_KEY}" \
-        "${SCRIPT_DIR}"/{common.sh,environment.sh,database.sh,containers.sh,services.sh} \
-        "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/server/deployment/"
-    
-    log_info "Copying configuration files..."
-    scp -i "${SSH_KEY}" \
-        "${PROJECT_ROOT}/.env" \
-        "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
-    
-    log_info "Copying application files..."
-    scp -i "${SSH_KEY}" \
-        docker-compose.yml \
-        "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
-    
-    # Execute remote deployment
-    if ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "$(cat << REMOTESCRIPT
-        # Strict error handling
-        set -euo pipefail
-        
-        # Export environment variables
-        export REMOTE_DIR='${REMOTE_DIR}'
-        export DB_NAME='${DB_NAME}'
-        export DB_USER='${DB_USER}'
-        export DB_PASSWORD='${DB_PASSWORD}'
-        export DB_PORT='${DB_PORT}'
-        export WEB_CONTAINER_NAME='${WEB_CONTAINER_NAME}'
-        export DB_CONTAINER_NAME='${DB_CONTAINER_NAME}'
-        export DOCKER_COMPOSE_FILE='${REMOTE_DIR}/docker-compose.yml'
-        
-        # Create logs directory first
-        mkdir -p '${REMOTE_DIR}/server/deployment/logs'
-        
-        # Change to deployment directory
-        cd '${REMOTE_DIR}/server/deployment'
-        
-        # Source all required scripts
-        source ./common.sh
-        source ./environment.sh
-        source ./database.sh
-        source ./containers.sh
-        source ./services.sh
-        
-        # Main deployment function
-        deploy() {
-            # Set up environment
-            setup_environment
-            
-            # Manage containers
-            manage_containers
-            
-            # Initialize database
-            initialize_database
-            
-            # Verify database connection
-            verify_db_connection
-            
-            # Set up system services
-            setup_services
-            
-            log "Deployment completed successfully"
-        }
-        
-        # Run deployment
-        deploy
-REMOTESCRIPT
-)"; then
-        log_success "Deployment completed successfully!"
-        log_info "You can access the application at: http://${REMOTE_HOST}:8501"
-    else
-        log_error "Deployment failed! Please check the error messages above."
+    if [ $i -eq 60 ]; then
+        echo -e "\n${RED}Database did not initialize in time. Please check for errors:${NC}"
+        docker compose ${COMPOSE_FILES} logs db
         exit 1
     fi
-}
+done
 
-# Run main function
-main 
+# Show the URL
+echo -e "\n${GREEN}App deployed successfully!${NC}"
+echo -e "${GREEN}The web interface is available at http://your-server:${APP_PORT}${NC}"
+
+# Show helpful information
+echo -e "\n${YELLOW}Helpful commands:${NC}"
+echo -e "  ${GREEN}docker compose ${COMPOSE_FILES} logs -f web${NC}  - View application logs"
+echo -e "  ${GREEN}docker compose ${COMPOSE_FILES} exec db psql -U ${DB_USER} -d ${DB_NAME}${NC} - Connect to database"
+echo -e "  ${GREEN}docker compose ${COMPOSE_FILES} down${NC} - Stop all services" 

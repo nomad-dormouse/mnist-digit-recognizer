@@ -56,13 +56,16 @@ if [ ! -f "${MODEL_FILE}" ]; then
     exit 1
 fi
 
+# Define Docker Compose files
+COMPOSE_FILES="-f docker-compose.yml -f docker-compose.local.override.yml"
+
 # Clean up existing resources
 echo -e "${YELLOW}Cleaning up existing resources...${NC}"
-cd "${SCRIPT_DIR}"
+cd "${PROJECT_ROOT}"
 
 # Stop and remove any previous Docker Compose setup
 echo -e "${YELLOW}Stopping existing containers...${NC}"
-docker compose -f docker-compose.local.yml down --remove-orphans -v
+docker compose ${COMPOSE_FILES} down --remove-orphans -v
 
 # Remove any orphaned containers with our names
 echo -e "${YELLOW}Removing any orphaned containers...${NC}"
@@ -74,7 +77,7 @@ docker volume rm mnist-digit-recognizer-db-volume 2>/dev/null || true
 
 # Start services
 echo -e "${YELLOW}Starting services...${NC}"
-docker compose -f docker-compose.local.yml up -d --build
+docker compose ${COMPOSE_FILES} up -d --build
 
 # Wait a bit for containers to stabilize
 sleep 5
@@ -82,7 +85,7 @@ sleep 5
 # Wait for database to be ready
 echo -e "${YELLOW}Waiting for database to initialize...${NC}"
 for i in {1..60}; do
-    if docker compose -f docker-compose.local.yml exec db pg_isready -U "${DB_USER}" &>/dev/null; then
+    if docker compose ${COMPOSE_FILES} exec db pg_isready -U "${DB_USER}" &>/dev/null; then
         echo -e "${GREEN}Database is ready!${NC}"
         break
     fi
@@ -91,14 +94,14 @@ for i in {1..60}; do
     
     if [ $i -eq 60 ]; then
         echo -e "\n${RED}Database did not initialize in time. Please check for errors:${NC}"
-        docker compose -f docker-compose.local.yml logs db
+        docker compose ${COMPOSE_FILES} logs db
         exit 1
     fi
 done
 
 # Create the predictions table
 echo -e "${YELLOW}Ensuring database is set up...${NC}"
-docker compose -f docker-compose.local.yml exec db psql -U "${DB_USER}" -d "${DB_NAME}" -c "
+docker compose ${COMPOSE_FILES} exec db psql -U "${DB_USER}" -d "${DB_NAME}" -c "
     CREATE TABLE IF NOT EXISTS predictions (
         id SERIAL PRIMARY KEY,
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -114,6 +117,6 @@ open "http://localhost:${APP_PORT}"
 
 # Show helpful information
 echo -e "\n${YELLOW}Helpful commands:${NC}"
-echo -e "  ${GREEN}docker compose -f docker-compose.local.yml logs -f web${NC}  - View application logs"
-echo -e "  ${GREEN}docker compose -f docker-compose.local.yml exec db psql -U ${DB_USER} -d ${DB_NAME}${NC} - Connect to database"
-echo -e "  ${GREEN}docker compose -f docker-compose.local.yml down -v${NC} - Stop and clean up all resources"
+echo -e "  ${GREEN}docker compose ${COMPOSE_FILES} logs -f web${NC}  - View application logs"
+echo -e "  ${GREEN}docker compose ${COMPOSE_FILES} exec db psql -U ${DB_USER} -d ${DB_NAME}${NC} - Connect to database"
+echo -e "  ${GREEN}docker compose ${COMPOSE_FILES} down -v${NC} - Stop and clean up all resources"
