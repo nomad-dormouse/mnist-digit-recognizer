@@ -18,14 +18,7 @@ services:
     depends_on:
       - db
     networks:
-      - mnist-network
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          memory: 512M
+      - default
 
   db:
     image: postgres:${DB_VERSION}
@@ -42,7 +35,7 @@ services:
       - mnist-digit-recognizer-db-volume:/var/lib/postgresql/data
       - ../database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
-      - mnist-network
+      - default
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
@@ -58,11 +51,8 @@ services:
           memory: 256M
 
 networks:
-  mnist-network:
+  default:
     name: mnist-network
-    driver: bridge
-    labels:
-      com.docker.compose.network: mnist-network
 
 volumes:
   mnist-digit-recognizer-db-volume:

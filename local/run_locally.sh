@@ -60,30 +60,43 @@ fi
 echo -e "${YELLOW}Cleaning up existing resources...${NC}"
 cd "${SCRIPT_DIR}"
 
-# Stop and remove containers
-docker compose -f docker-compose.local.yml down --remove-orphans
-
-# Remove the network if it exists
-docker network rm mnist-network 2>/dev/null || true
+# Stop and remove containers - force the removal
+docker compose -f docker-compose.local.yml down --remove-orphans -v
 
 # Remove the volume if it exists
+echo -e "${YELLOW}Removing any existing volumes...${NC}"
 docker volume rm mnist-digit-recognizer-db-volume 2>/dev/null || true
+
+# Force remove any containers with the same names
+echo -e "${YELLOW}Removing any existing containers...${NC}"
+docker rm -f "${WEB_CONTAINER_NAME}" "${DB_CONTAINER_NAME}" 2>/dev/null || true
+
+# Remove the network if it exists
+echo -e "${YELLOW}Removing existing network...${NC}"
+docker network rm mnist-network 2>/dev/null || true
+
+# Create fresh network
+echo -e "${YELLOW}Creating fresh network...${NC}"
+docker network create mnist-network || true
 
 # Start services
 echo -e "${YELLOW}Starting services...${NC}"
 docker compose -f docker-compose.local.yml up -d --build
 
+# Wait a bit for containers to stabilize
+sleep 5
+
 # Wait for database to be ready
 echo -e "${YELLOW}Waiting for database to initialize...${NC}"
-for i in {1..30}; do
-    if docker compose -f docker-compose.local.yml exec db pg_isready -U "${DB_USER}" -d "${DB_NAME}" &>/dev/null; then
+for i in {1..60}; do
+    if docker compose -f docker-compose.local.yml exec db pg_isready -U "${DB_USER}" &>/dev/null; then
         echo -e "${GREEN}Database is ready!${NC}"
         break
     fi
     echo -n "."
-    sleep 1
+    sleep 2
     
-    if [ $i -eq 30 ]; then
+    if [ $i -eq 60 ]; then
         echo -e "\n${RED}Database did not initialize in time. Please check for errors:${NC}"
         docker compose -f docker-compose.local.yml logs db
         exit 1
