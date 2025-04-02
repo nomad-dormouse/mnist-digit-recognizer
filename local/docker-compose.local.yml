@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   web:
     build:
@@ -63,6 +61,8 @@ networks:
   mnist-network:
     name: mnist-network
     driver: bridge
+    labels:
+      com.docker.compose.network: mnist-network
 
 volumes:
   mnist-digit-recognizer-db-volume:

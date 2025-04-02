@@ -58,7 +58,16 @@ fi
 
 # Clean up existing resources
 echo -e "${YELLOW}Cleaning up existing resources...${NC}"
-cd "${SCRIPT_DIR}" && docker compose -f docker-compose.local.yml down -v
+cd "${SCRIPT_DIR}"
+
+# Stop and remove containers
+docker compose -f docker-compose.local.yml down --remove-orphans
+
+# Remove the network if it exists
+docker network rm mnist-network 2>/dev/null || true
+
+# Remove the volume if it exists
+docker volume rm mnist-digit-recognizer-db-volume 2>/dev/null || true
 
 # Start services
 echo -e "${YELLOW}Starting services...${NC}"
@@ -67,7 +76,7 @@ docker compose -f docker-compose.local.yml up -d --build
 # Wait for database to be ready
 echo -e "${YELLOW}Waiting for database to initialize...${NC}"
 for i in {1..30}; do
-    if docker compose -f docker-compose.local.yml exec db pg_isready -U "${DB_USER}" &>/dev/null; then
+    if docker compose -f docker-compose.local.yml exec db pg_isready -U "${DB_USER}" -d "${DB_NAME}" &>/dev/null; then
         echo -e "${GREEN}Database is ready!${NC}"
         break
     fi
