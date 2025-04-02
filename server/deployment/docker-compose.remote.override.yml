@@ -1,8 +1,11 @@
+# REMOTE ENVIRONMENT OVERRIDES
+# This file contains overrides specific to server deployment
+
 services:
+  # WEB APPLICATION SERVICE
   web:
     build:
       dockerfile: server/deployment/Dockerfile
-    container_name: ${WEB_CONTAINER_NAME}
     restart: unless-stopped
     deploy:
       resources:
@@ -12,12 +15,9 @@ services:
         reservations:
           memory: 512M
 
+  # DATABASE SERVICE
   db:
-    container_name: ${DB_CONTAINER_NAME}
     restart: unless-stopped
-    volumes:
-      - db-data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     deploy:
       resources:
         limits:
@@ -25,7 +25,3 @@ services:
           memory: 512M
         reservations:
           memory: 256M
-
-volumes:
-  db-data:
-    name: ${DB_VOLUME_NAME} 

@@ -1,9 +1,10 @@
-# MNIST Digit Recognizer Application
-# Docker Compose configuration file
+# MNIST DIGIT RECOGNIZER APPLICATION
+# Base Docker Compose configuration file
 
 services:
-  # Web Application Service
+  # WEB APPLICATION SERVICE
   web:
+    container_name: ${WEB_CONTAINER_NAME}
     build:
       context: .
     ports:
@@ -20,8 +21,9 @@ services:
     depends_on:
       - db
 
-  # Database Service
+  # DATABASE SERVICE
   db:
+    container_name: ${DB_CONTAINER_NAME}
     image: postgres:${DB_VERSION}
     environment:
       - POSTGRES_DB=${DB_NAME}
@@ -34,7 +36,7 @@ services:
     ports:
       - "${DB_PORT}:5432"
     volumes:
-      - mnist-digit-recognizer-db-volume:/var/lib/postgresql/data
+      - mnist-digit-recogniser-db-volume:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
@@ -43,12 +45,12 @@ services:
       retries: 5
       start_period: 10s
 
-# Network Configuration
+# NETWORK CONFIGURATION
 networks:
   mnist-network:
     driver: bridge
 
-# Volume Configuration
+# VOLUME CONFIGURATION
 volumes:
-  mnist-digit-recognizer-db-volume:
-    driver: local 
+  mnist-digit-recogniser-db-volume:
+    name: ${DB_VOLUME_NAME} 
