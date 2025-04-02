@@ -6,20 +6,30 @@
 # This script views the local Docker containerized database.
 # 
 # Usage:
-#   ./scripts/local/view_local_db.sh           # Default 20 records
-#   ./scripts/local/view_local_db.sh 50        # Show 50 records
-#   ./scripts/local/view_local_db.sh all       # Show all records
+#   ./local/view_local_db.sh           # Default 20 records
+#   ./local/view_local_db.sh 50        # Show 50 records
+#   ./local/view_local_db.sh all       # Show all records
 # ================================================================================
 
-# Database settings 
-DB_CONTAINER="mnist-digit-recognizer-db-1"
-DB_NAME="mnist_db"
-DB_USER="postgres"
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
+
+# Load environment variables if they exist
+if [ -f "${PROJECT_ROOT}/.env" ]; then
+    source "${PROJECT_ROOT}/.env"
+fi
+
+# Database settings (use environment variables or defaults)
+DB_CONTAINER="${DB_CONTAINER_NAME:-mnist-digit-recognizer-db}"
+DB_NAME="${DB_NAME:-mnist_db}"
+DB_USER="${DB_USER:-postgres}"
 
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 # Parse command line arguments
@@ -29,6 +39,19 @@ if [[ "$1" == "all" ]]; then
     LIMIT="ALL"
 elif [[ "$1" =~ ^[0-9]+$ ]]; then
     LIMIT="$1"
+fi
+
+# Check if Docker is running
+if ! docker ps &>/dev/null; then
+    echo -e "${RED}Error: Docker is not running. Start Docker Desktop first.${NC}"
+    exit 1
+fi
+
+# Check if database container is running
+if ! docker ps -q -f name="^${DB_CONTAINER}$" &>/dev/null; then
+    echo -e "${RED}Error: Database container '${DB_CONTAINER}' is not running.${NC}"
+    echo -e "Run ${YELLOW}./local/run_locally.sh${NC} to start the application."
+    exit 1
 fi
 
 echo -e "${YELLOW}Viewing local database records (limit: $LIMIT)...${NC}"
@@ -41,6 +64,13 @@ docker_db_query() {
 docker_db_value() {
     docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -tAc "$1"
 }
+
+# Check if predictions table exists
+if ! docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -c "\dt predictions" | grep -q "predictions"; then
+    echo -e "${RED}Error: Table 'predictions' does not exist.${NC}"
+    echo -e "Run ${YELLOW}./local/run_locally.sh${NC} to initialize the database."
+    exit 1
+fi
 
 # Get statistics
 TOTAL_RECORDS=$(docker_db_value "SELECT COUNT(*) FROM predictions;")
@@ -99,5 +129,5 @@ if [ "$LABELED_RECORDS" -gt 0 ]; then
 fi
 
 echo -e "\n${GREEN}Local database query complete.${NC}"
-echo -e "To view more or fewer records, use: ./scripts/local/view_local_db.sh [limit|all]"
-echo -e "To view server database, use: ssh root@37.27.197.79 \"cd /root/mnist-digit-recognizer && ./scripts/view_db.sh\"" 
+echo -e "To view more or fewer records, use: ${YELLOW}./local/view_local_db.sh [limit|all]${NC}"
+echo -e "To view server database, use: ${YELLOW}./server/helpers/view_db.sh${NC}" 
