@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # ================================================================================
-# LOCAL DOCKER DEVELOPMENT RUNNER
+# LOCAL DEVELOPMENT RUNNER
 # ================================================================================
-# This script runs the MNIST Digit Recognizer app locally using Docker.
+# This script runs the MNIST Digit Recognizer app locally using Docker Compose.
 # 
 # Usage:
 #   ./local/run_locally.sh
@@ -16,7 +16,6 @@
 #   - All components (app and database) run in Docker containers
 #   - Data persists between runs in a Docker volume
 #   - The web interface is available at http://localhost:8501
-#   - To view database contents, use: ./local/view_local_db.sh
 # ================================================================================
 
 # Get the directory where this script is located
@@ -49,35 +48,16 @@ fi
 
 # Clean up existing resources
 echo -e "${YELLOW}Cleaning up existing resources...${NC}"
-docker rm -f "${WEB_CONTAINER_NAME}" 2>/dev/null || true
-docker rm -f "${DB_CONTAINER_NAME}" 2>/dev/null || true
-docker network rm "${NETWORK_NAME}" 2>/dev/null || true
+cd "${SCRIPT_DIR}" && docker compose -f docker-compose.local.yml down -v
 
-# Create a named volume for database persistence
-echo -e "${YELLOW}Setting up persistent storage...${NC}"
-docker volume inspect "${DB_VOLUME_NAME}" >/dev/null 2>&1 || docker volume create "${DB_VOLUME_NAME}"
-
-# Create network for the containers
-docker network create "${NETWORK_NAME}"
-
-# Start database container
-echo -e "${YELLOW}Starting database container...${NC}"
-docker run -d --name "${DB_CONTAINER_NAME}" \
-    --network "${NETWORK_NAME}" \
-    --network-alias db \
-    -p "${DB_PORT}:5432" \
-    -e POSTGRES_PASSWORD="${DB_PASSWORD}" \
-    -e POSTGRES_USER="${DB_USER}" \
-    -e POSTGRES_DB="${DB_NAME}" \
-    -e POSTGRES_INITDB_ARGS="--data-checksums" \
-    -e PGDATA="/var/lib/postgresql/data/pgdata" \
-    -v "${DB_VOLUME_NAME}:/var/lib/postgresql/data" \
-    postgres:${DB_VERSION}
+# Start services
+echo -e "${YELLOW}Starting services...${NC}"
+docker compose -f docker-compose.local.yml up -d --build
 
 # Wait for database to be ready
 echo -e "${YELLOW}Waiting for database to initialize...${NC}"
 for i in {1..30}; do
-    if docker exec "${DB_CONTAINER_NAME}" pg_isready -U "${DB_USER}" &>/dev/null; then
+    if docker compose -f docker-compose.local.yml exec db pg_isready -U "${DB_USER}" &>/dev/null; then
         echo -e "${GREEN}Database is ready!${NC}"
         break
     fi
@@ -86,14 +66,14 @@ for i in {1..30}; do
     
     if [ $i -eq 30 ]; then
         echo -e "\n${RED}Database did not initialize in time. Please check for errors:${NC}"
-        docker logs "${DB_CONTAINER_NAME}"
+        docker compose -f docker-compose.local.yml logs db
         exit 1
     fi
 done
 
 # Create the predictions table
 echo -e "${YELLOW}Ensuring database is set up...${NC}"
-docker exec "${DB_CONTAINER_NAME}" psql -U "${DB_USER}" -d "${DB_NAME}" -c "
+docker compose -f docker-compose.local.yml exec db psql -U "${DB_USER}" -d "${DB_NAME}" -c "
     CREATE TABLE IF NOT EXISTS predictions (
         id SERIAL PRIMARY KEY,
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -102,21 +82,6 @@ docker exec "${DB_CONTAINER_NAME}" psql -U "${DB_USER}" -d "${DB_NAME}" -c "
         confidence FLOAT NOT NULL
     );" > /dev/null 2>&1
 
-# Build and start the web container
-echo -e "${YELLOW}Building and starting web container...${NC}"
-docker build -t mnist-app-local -f local/Dockerfile.local .
-docker run -d --name "${WEB_CONTAINER_NAME}" \
-    --network "${NETWORK_NAME}" \
-    -p "${APP_PORT}:${APP_PORT}" \
-    -v "${PROJECT_ROOT}/model/saved_models:/app/model/saved_models:ro" \
-    -e DB_HOST="db" \
-    -e DB_PORT="5432" \
-    -e DB_NAME="${DB_NAME}" \
-    -e DB_USER="${DB_USER}" \
-    -e DB_PASSWORD="${DB_PASSWORD}" \
-    -e MODEL_PATH="${MODEL_PATH}" \
-    mnist-app-local
-
 # Show the URL and open browser
 echo -e "\n${GREEN}App running at http://localhost:${APP_PORT}${NC}"
 echo -e "${YELLOW}Opening browser...${NC}"
@@ -124,5 +89,6 @@ open "http://localhost:${APP_PORT}"
 
 # Show helpful information
 echo -e "\n${YELLOW}Helpful commands:${NC}"
-echo -e "  ${GREEN}docker logs -f ${WEB_CONTAINER_NAME}${NC}  - View application logs"
-echo -e "  ${GREEN}docker exec -it ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME}${NC} - Connect to database"
+echo -e "  ${GREEN}docker compose -f docker-compose.local.yml logs -f web${NC}  - View application logs"
+echo -e "  ${GREEN}docker compose -f docker-compose.local.yml exec db psql -U ${DB_USER} -d ${DB_NAME}${NC} - Connect to database"
+echo -e "  ${GREEN}docker compose -f docker-compose.local.yml down -v${NC} - Stop and clean up all resources"
