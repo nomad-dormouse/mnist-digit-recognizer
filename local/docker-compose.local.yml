@@ -17,8 +17,6 @@ services:
       - ../model/saved_models:/app/model/saved_models:ro
     depends_on:
       - db
-    networks:
-      - default
 
   db:
     image: postgres:${DB_VERSION}
@@ -34,8 +32,6 @@ services:
     volumes:
       - mnist-digit-recognizer-db-volume:/var/lib/postgresql/data
       - ../database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    networks:
-      - default
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
@@ -50,10 +46,5 @@ services:
         reservations:
           memory: 256M
 
-networks:
-  default:
-    name: mnist-network
-
 volumes:
-  mnist-digit-recognizer-db-volume:
-    name: mnist-digit-recognizer-db-volume 
+  mnist-digit-recognizer-db-volume: 
