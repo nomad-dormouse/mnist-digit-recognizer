@@ -166,7 +166,7 @@ fi
 # USER INFORMATION
 # Show the URL
 echo -e "\n${GREEN}App deployed successfully!${NC}"
-echo -e "${GREEN}The web interface is available at http://$(hostname -I | awk '{print $1}'):${APP_PORT}${NC}"
+echo -e "${GREEN}The web interface is available at http://${REMOTE_HOST}:${APP_PORT}${NC}"
 
 # Show helpful information
 echo -e "\n${YELLOW}Helpful commands:${NC}"
