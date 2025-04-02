@@ -135,4 +135,4 @@ fi
 # USER INFORMATION
 echo -e "\n${GREEN}Local database query complete.${NC}"
 echo -e "To view more or fewer records, use: ${YELLOW}./local/helpers/view_local_db.sh [limit|all]${NC}"
-echo -e "To view server database, use: ${YELLOW}./server/helpers/view_db.sh${NC}" 
+echo -e "To view server database, use: ${YELLOW}./remote/helpers/view_db.sh${NC}" 
