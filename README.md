@@ -29,12 +29,21 @@ This project demonstrates an end-to-end machine learning application that:
 project_root/
 ├── app/                # Application code
 ├── model/             # Model training and inference
-├── docker/            # Docker configuration
-├── local/            # Local development setup
-│   └── .env.local    # Local environment variables
-└── server/           # Server-side components
-    └── deployment/   # Deployment configuration
-        └── .env     # Production environment variables
+├── database/          # Database initialization scripts
+├── local/             # Local development setup
+│   ├── Dockerfile.local  # Local development Dockerfile
+│   └── run_locally.sh    # Local development script
+├── server/            # Server-side components
+│   ├── deployment/    # Deployment configuration and scripts
+│   │   ├── deploy.sh  # Main deployment script
+│   │   ├── common.sh  # Common functions
+│   │   ├── database.sh # Database management
+│   │   └── services.sh # Service management
+│   └── helpers/       # Helper scripts for monitoring
+│       ├── check_web_logs.sh
+│       └── view_db.sh
+├── docker-compose.yml # Docker Compose configuration
+└── .env              # Environment variables
 ```
 
 ## Local Development
@@ -44,27 +53,60 @@ For detailed instructions on setting up and running the application locally, ple
 This includes:
 - Quick setup with Docker
 - Manual setup instructions
-- Database initialization
+- Database initialization and management
 - Environment configuration
-- Development tools
+- Development tools and utilities
+
+### Quick Start
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/nomad-dormouse/mnist-digit-recognizer.git
+   cd mnist-digit-recognizer
+   ```
+
+2. Run the local development script:
+   ```bash
+   ./local/run_locally.sh
+   ```
+
+The application will be available at `http://localhost:8501`
 
 ## Deployment
 
 To deploy the application to a production server:
 
-1. **Update deployment configuration:**
-   Edit `server/deploy.sh` and update:
-   - `REMOTE_HOST` with your server IP
-   - `SSH_KEY` with your SSH key path
-   - `REPO_URL` with your GitHub repository URL
+1. **Prepare the server:**
+   - Install Docker and Docker Compose
+   - Set up SSH access with your key
+   - Create the deployment directory
 
-2. **Run the deployment script:**
+2. **Configure deployment:**
+   Update the deployment configuration in `server/deployment/deploy.sh`:
+   - Set your server IP
+   - Configure SSH key path
+   - Set database credentials
+   - Adjust other deployment settings as needed
+
+3. **Run the deployment script:**
    ```bash
-   ./server/deploy.sh
+   ./server/deployment/deploy.sh
    ```
 
-3. **Access the deployed application:**
-   Open your browser and navigate to `http://your-server-ip:8501`
+4. **Verify deployment:**
+   - Check application logs: `./server/helpers/check_web_logs.sh`
+   - View database status: `./server/helpers/view_db.sh`
+   - Access the application at `http://your-server-ip:8501`
+
+### Database Management
+
+The application uses PostgreSQL for storing predictions. The database is:
+- Automatically initialized during first deployment
+- Backed up regularly (configurable interval)
+- Monitored for health and connectivity
+- Protected with proper access controls
+
+For database management commands, see the [Server Helpers Guide](server/helpers/README.md).
 
 ## Technical Details
 
