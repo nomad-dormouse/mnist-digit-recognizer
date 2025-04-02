@@ -124,13 +124,12 @@ The digit recognition model is a Convolutional Neural Network (CNN) with:
 
 ### Docker Configuration
 
-The project uses a base Dockerfile approach for better maintainability:
-- A base `Dockerfile` in the root directory contains common dependencies and configuration
-- Environment-specific Dockerfiles extend the base Dockerfile:
-  - `local/Dockerfile.local` for local development environment
-  - `remote/Dockerfile.remote` for production deployment
-- Each environment-specific Dockerfile adds only the settings needed for that environment
-- Docker Compose override files specify which Dockerfile to use for each environment
+The project uses a multi-stage Dockerfile approach for better maintainability:
+- A single `Dockerfile` in the root directory contains stages for both local and remote environments
+- The `base` stage contains common dependencies and configuration
+- The `local` stage adds development-specific settings
+- The `remote` stage adds production-specific settings
+- Docker Compose override files specify which target to use for each environment
 
 ### Database Schema
 

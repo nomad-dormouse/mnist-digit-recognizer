@@ -6,7 +6,8 @@ services:
   web:
     build:
       context: ..
-      dockerfile: local/Dockerfile.local
+      dockerfile: Dockerfile
+      target: local
     environment:
       - MODEL_PATH=${MODEL_PATH}
     volumes:

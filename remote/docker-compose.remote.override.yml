@@ -6,7 +6,8 @@ services:
   web:
     build:
       context: ..
-      dockerfile: remote/Dockerfile.remote
+      dockerfile: Dockerfile
+      target: remote
     restart: unless-stopped
     deploy:
       resources:

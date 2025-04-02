@@ -1,9 +1,15 @@
-# BASE DOCKERFILE
+# MNIST DIGIT RECOGNIZER DOCKERFILE
 #
-# This file contains common configuration shared by all environments.
-# Environment-specific settings are in Dockerfile.local and Dockerfile.remote.
+# This file contains all Docker configurations for the application:
+# - Base configuration shared by all environments
+# - Local development environment configuration
+# - Remote production environment configuration
 
-FROM python:3.9-slim
+# ============================================================
+# BASE STAGE
+# Common configuration shared by all environments
+# ============================================================
+FROM python:3.9-slim AS base
 
 WORKDIR /app
 
@@ -30,4 +36,35 @@ ENV PYTHONUNBUFFERED=1 \
 # Expose the port Streamlit will run on
 EXPOSE 8501
 
-# The CMD instruction will be provided by specific environment Dockerfiles 
+# ============================================================
+# LOCAL STAGE
+# Configuration for local development environment
+# ============================================================
+FROM base AS local
+
+# Copy the application code
+COPY . .
+
+# Patch the app.py file to use the database service name for connectivity
+# and to skip the 'db' hostname attempt in local Docker
+RUN sed -i 's/DB_HOST = os.getenv.*$/DB_HOST = "db"/' app.py && \
+    sed -i 's/is_running_locally = not os.environ.get.*/is_running_locally = False/' app.py && \
+    sed -i 's/if os.path.exists.*or os.environ.get.*/if False:/' app.py
+
+# Command to run the application with development settings
+CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0"]
+
+# ============================================================
+# REMOTE STAGE
+# Configuration for remote production environment
+# ============================================================
+FROM base AS remote
+
+# Copy the application code
+COPY . .
+
+# Set production-specific environment variables
+ENV STREAMLIT_SERVER_ENABLE_CORS=false
+
+# Command to run the application with production settings
+CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0"] 
