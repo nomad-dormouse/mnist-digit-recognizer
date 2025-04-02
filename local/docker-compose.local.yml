@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: local/Dockerfile.local
+    container_name: ${WEB_CONTAINER_NAME}
+    ports:
+      - "${APP_PORT}:8501"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ../model/saved_models:/app/model/saved_models:ro
+    depends_on:
+      - db
+    networks:
+      - mnist-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  db:
+    image: postgres:${DB_VERSION}
+    container_name: ${DB_CONTAINER_NAME}
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--data-checksums
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - ${DB_VOLUME_NAME}:/var/lib/postgresql/data
+      - ../database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - mnist-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          memory: 256M
+
+networks:
+  mnist-network:
+    name: mnist-network
+    driver: bridge
+
+volumes:
+  ${DB_VOLUME_NAME}:
+    name: ${DB_VOLUME_NAME} 
