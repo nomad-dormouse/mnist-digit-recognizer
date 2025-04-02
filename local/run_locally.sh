@@ -23,21 +23,23 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 
-# Load environment variables
-if [ -f "${SCRIPT_DIR}/.env.local" ]; then
-    echo -e "${GREEN}Loading environment variables from .env.local...${NC}"
-    source "${SCRIPT_DIR}/.env.local"
-else
-    echo -e "${RED}Error: .env.local file not found in ${SCRIPT_DIR}${NC}"
-    echo -e "${YELLOW}Please create .env.local from .env.local.template${NC}"
-    exit 1
-fi
-
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
+
+# Load environment variables
+if [ -f "${SCRIPT_DIR}/.env.local" ]; then
+    echo -e "${GREEN}Loading environment variables from .env.local...${NC}"
+    set -a
+    source "${SCRIPT_DIR}/.env.local"
+    set +a
+else
+    echo -e "${RED}Error: .env.local file not found in ${SCRIPT_DIR}${NC}"
+    echo -e "${YELLOW}Please create .env.local from .env.local.template${NC}"
+    exit 1
+fi
 
 # Check Docker is running
 if ! docker ps &>/dev/null; then
