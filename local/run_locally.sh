@@ -4,7 +4,10 @@
 # This script runs the MNIST Digit Recognizer app locally using Docker Compose.
 # 
 # Usage:
-#   ./local/run_locally.sh
+#   ./local/run_locally.sh [--clean]
+#
+# Options:
+#   --clean   Perform a clean restart (removes database volume)
 #
 # Requirements:
 #   - Docker Desktop running
@@ -26,6 +29,18 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
+
+# Parse command line arguments
+CLEAN_RESTART=false
+for arg in "$@"; do
+    case $arg in
+        --clean)
+            CLEAN_RESTART=true
+            echo -e "${YELLOW}Clean restart requested. Database volume will be removed.${NC}"
+            shift
+            ;;
+    esac
+done
 
 # ENVIRONMENT VARIABLES
 echo -e "${GREEN}Loading environment variables...${NC}"
@@ -80,8 +95,13 @@ echo -e "${YELLOW}Cleaning up existing resources...${NC}"
 cd "${PROJECT_ROOT}"
 
 # Stop and remove any previous Docker Compose setup
-echo -e "${YELLOW}Stopping existing containers...${NC}"
-docker compose ${COMPOSE_FILES} down --remove-orphans -v
+if [ "$CLEAN_RESTART" = true ]; then
+    echo -e "${YELLOW}Stopping existing containers and removing volumes...${NC}"
+    docker compose ${COMPOSE_FILES} down --remove-orphans -v
+else
+    echo -e "${YELLOW}Stopping existing containers (preserving volumes)...${NC}"
+    docker compose ${COMPOSE_FILES} down --remove-orphans
+fi
 
 # Remove any orphaned containers with our names
 echo -e "${YELLOW}Removing any orphaned containers...${NC}"
@@ -91,12 +111,17 @@ else
     echo -e "${YELLOW}Warning: Container name variables are not set. Skipping orphaned container removal.${NC}"
 fi
 
-# Remove the volume if it exists
-echo -e "${YELLOW}Removing database volume...${NC}"
-if [[ -n "${DB_VOLUME_NAME}" ]]; then
-    docker volume rm "${DB_VOLUME_NAME}" 2>/dev/null || true
+# Remove the volume if clean restart is requested
+if [ "$CLEAN_RESTART" = true ]; then
+    echo -e "${YELLOW}Removing database volume for clean restart...${NC}"
+    if [[ -n "${DB_VOLUME_NAME}" ]]; then
+        docker volume rm "${DB_VOLUME_NAME}" 2>/dev/null || true
+        echo -e "${GREEN}Database volume removed. You will start with a fresh database.${NC}"
+    else
+        echo -e "${YELLOW}Warning: DB_VOLUME_NAME is not set. Skipping volume removal.${NC}"
+    fi
 else
-    echo -e "${YELLOW}Warning: DB_VOLUME_NAME is not set. Skipping volume removal.${NC}"
+    echo -e "${GREEN}Preserving database volume. Your data will be intact.${NC}"
 fi
 
 # SERVICE STARTUP
@@ -154,7 +179,7 @@ for i in $(seq 1 $MAX_RETRIES); do
 done
 
 # DATABASE SETUP
-# Create the predictions table
+# Create the predictions table if it doesn't exist
 echo -e "${YELLOW}Ensuring database is set up...${NC}"
 docker compose ${COMPOSE_FILES} exec db psql -U "${DB_USER}" -d "${DB_NAME}" -c "
     CREATE TABLE IF NOT EXISTS predictions (
@@ -181,4 +206,6 @@ open "http://localhost:${APP_PORT}"
 echo -e "\n${YELLOW}Helpful commands:${NC}"
 echo -e "  ${GREEN}docker compose ${COMPOSE_FILES} logs -f web${NC}  - View application logs"
 echo -e "  ${GREEN}docker compose ${COMPOSE_FILES} exec db psql -U ${DB_USER} -d ${DB_NAME}${NC} - Connect to database"
-echo -e "  ${GREEN}docker compose ${COMPOSE_FILES} down -v${NC} - Stop and clean up all resources"
+echo -e "  ${GREEN}docker compose ${COMPOSE_FILES} down${NC} - Stop containers (preserving data)"
+echo -e "  ${GREEN}docker compose ${COMPOSE_FILES} down -v${NC} - Stop and clean up all resources (deletes data)"
+echo -e "  ${GREEN}./local/run_locally.sh --clean${NC} - Restart with a fresh database"
