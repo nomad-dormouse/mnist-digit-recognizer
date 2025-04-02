@@ -1,20 +1,27 @@
 #!/bin/bash
 
-# ================================================================================
 # LOCAL DATABASE VIEWER
-# ================================================================================
 # This script views the local Docker containerized database.
 # 
 # Usage:
-#   ./local/view_local_db.sh           # Default 20 records
-#   ./local/view_local_db.sh 50        # Show 50 records
-#   ./local/view_local_db.sh all       # Show all records
-# ================================================================================
+#   ./local/helpers/view_local_db.sh           # Default 20 records
+#   ./local/helpers/view_local_db.sh 50        # Show 50 records
+#   ./local/helpers/view_local_db.sh all       # Show all records
 
+# INITIALIZATION
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
+PARENT_DIR="$(dirname "${SCRIPT_DIR}")"
+PROJECT_ROOT="$(dirname "${PARENT_DIR}")"
 
+# Define colors for output
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# ENVIRONMENT VARIABLES
 # Load environment variables if they exist
 if [ -f "${PROJECT_ROOT}/.env" ]; then
     source "${PROJECT_ROOT}/.env"
@@ -25,13 +32,6 @@ DB_CONTAINER="${DB_CONTAINER_NAME:-mnist-digit-recognizer-db}"
 DB_NAME="${DB_NAME:-mnist_db}"
 DB_USER="${DB_USER:-postgres}"
 
-# Colors
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
-
 # Parse command line arguments
 LIMIT=20  # Default number of records to show
 
@@ -41,6 +41,7 @@ elif [[ "$1" =~ ^[0-9]+$ ]]; then
     LIMIT="$1"
 fi
 
+# PREREQUISITES CHECK
 # Check if Docker is running
 if ! docker ps &>/dev/null; then
     echo -e "${RED}Error: Docker is not running. Start Docker Desktop first.${NC}"
@@ -56,6 +57,7 @@ fi
 
 echo -e "${YELLOW}Viewing local database records (limit: $LIMIT)...${NC}"
 
+# DATABASE QUERIES
 # Query functions
 docker_db_query() {
     docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -c "$1"
@@ -72,6 +74,7 @@ if ! docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -c "\dt predic
     exit 1
 fi
 
+# ANALYTICS
 # Get statistics
 TOTAL_RECORDS=$(docker_db_value "SELECT COUNT(*) FROM predictions;")
 LABELED_RECORDS=$(docker_db_value "SELECT COUNT(*) FROM predictions WHERE true_label IS NOT NULL;")
@@ -86,6 +89,7 @@ if [ "$LABELED_RECORDS" != "0" ]; then
     echo -e "${BLUE}Overall accuracy: ${ACCURACY}%${NC}"
 fi
 
+# DATA VISUALIZATION
 # Display recent predictions
 echo -e "\n${YELLOW}Recent predictions:${NC}"
 docker_db_query "
@@ -128,6 +132,7 @@ if [ "$LABELED_RECORDS" -gt 0 ]; then
         ORDER BY true_label;"
 fi
 
+# USER INFORMATION
 echo -e "\n${GREEN}Local database query complete.${NC}"
-echo -e "To view more or fewer records, use: ${YELLOW}./local/view_local_db.sh [limit|all]${NC}"
+echo -e "To view more or fewer records, use: ${YELLOW}./local/helpers/view_local_db.sh [limit|all]${NC}"
 echo -e "To view server database, use: ${YELLOW}./server/helpers/view_db.sh${NC}" 

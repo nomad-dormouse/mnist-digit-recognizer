@@ -12,7 +12,7 @@ Purpose:
     - See the variety of handwriting styles in the dataset
 
 Usage:
-    ./scripts/local/view_mnist_samples.py
+    ./local/helpers/view_mnist_samples.py
 
 Requirements:
     - PyTorch and torchvision (for loading the MNIST dataset)
@@ -33,10 +33,13 @@ import torchvision
 import plotly.graph_objects as go
 import plotly.subplots as sp
 
+# CONFIGURATION
 # File settings
-OUTPUT_FILE = os.path.join(os.path.dirname(__file__), "mnist_samples.html")
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_FILE = os.path.join(SCRIPT_DIR, "mnist_samples.html")
 GRID_SIZE = 5  # 5x5 grid
 
+# DATA LOADING
 # Load MNIST dataset
 print("Loading MNIST dataset...")
 mnist_train = torchvision.datasets.MNIST(
@@ -46,6 +49,7 @@ mnist_train = torchvision.datasets.MNIST(
     transform=torchvision.transforms.ToTensor()
 )
 
+# VISUALIZATION CREATION
 # Create plot
 fig = sp.make_subplots(rows=GRID_SIZE, cols=GRID_SIZE)
 
@@ -89,6 +93,7 @@ for i in range(GRID_SIZE * GRID_SIZE):
         f'xaxis{i+1}_title_font': {'size': 16, 'color': 'blue'},
     })
 
+# OUTPUT AND DISPLAY
 # Save and display
 fig.write_html(OUTPUT_FILE)
 file_path = os.path.abspath(OUTPUT_FILE)
@@ -97,6 +102,7 @@ file_path = os.path.abspath(OUTPUT_FILE)
 print(f"Opening {OUTPUT_FILE} in your default browser...")
 webbrowser.open('file://' + file_path)
 
+# USER INFORMATION
 # Summary info
 print(f"\nMNIST Dataset Information:")
 print(f"- Training samples: {len(mnist_train)}")
