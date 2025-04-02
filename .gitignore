@@ -91,6 +91,8 @@ logs/
 # Examples
 local/*
 !local/README.md
+!local/docker-compose.local.yml
+!local/docker-compose.local.override.yml
 
 # ================================================================================
 # Docker

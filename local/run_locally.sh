@@ -57,7 +57,7 @@ if [ ! -f "${MODEL_FILE}" ]; then
 fi
 
 # Define Docker Compose files
-COMPOSE_FILES="-f docker-compose.yml -f docker-compose.local.override.yml"
+COMPOSE_FILES="-f docker-compose.yml -f local/docker-compose.local.override.yml"
 
 # Clean up existing resources
 echo -e "${YELLOW}Cleaning up existing resources...${NC}"
