@@ -12,11 +12,11 @@ from dotenv import load_dotenv
 from streamlit_drawable_canvas import st_canvas
 
 # Add the model directory to Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from model.model import MNISTModel
 
 # Load environment variables
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+project_root = os.path.dirname(os.path.abspath(__file__))
 
 # First try local/.env.local for local development
 local_env = os.path.join(project_root, 'local', '.env.local')
@@ -158,8 +158,7 @@ def load_model():
     model = MNISTModel().to(device)
     
     # Get the absolute path to the model file
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(current_dir)
+    project_root = os.path.dirname(os.path.abspath(__file__))
     
     # Define possible model paths (local development vs Docker)
     possible_paths = [

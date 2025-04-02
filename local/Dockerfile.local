@@ -20,9 +20,9 @@ RUN mkdir -p model/saved_models
 
 # Patch the app.py file to use the database service name for connectivity
 # and to skip the 'db' hostname attempt in local Docker
-RUN sed -i 's/DB_HOST = os.getenv.*$/DB_HOST = "db"/' app/app.py && \
-    sed -i 's/is_running_locally = not os.environ.get.*/is_running_locally = False/' app/app.py && \
-    sed -i 's/if os.path.exists.*or os.environ.get.*/if False:/' app/app.py
+RUN sed -i 's/DB_HOST = os.getenv.*$/DB_HOST = "db"/' app.py && \
+    sed -i 's/is_running_locally = not os.environ.get.*/is_running_locally = False/' app.py && \
+    sed -i 's/if os.path.exists.*or os.environ.get.*/if False:/' app.py
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -38,4 +38,4 @@ ENV PYTHONUNBUFFERED=1 \
 EXPOSE 8501
 
 # Command to run the application
-CMD ["streamlit", "run", "app/app.py", "--server.address", "0.0.0.0"] 
+CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0"] 
