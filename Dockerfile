@@ -1,8 +1,7 @@
-# Multi-stage Dockerfile for MNIST Digit Recognizer
-# This Dockerfile provides both local development and production builds
+# Base Dockerfile for MNIST Digit Recognizer
+# This file contains common configuration shared by all environments
 
-# Base stage with common dependencies
-FROM python:3.9-slim AS base
+FROM python:3.9-slim
 
 WORKDIR /app
 
@@ -29,38 +28,4 @@ ENV PYTHONUNBUFFERED=1 \
 # Expose the port Streamlit will run on
 EXPOSE 8501
 
-# -----------------------------------------------------------------------------
-# Local development stage
-FROM base AS local
-
-# Copy the application code
-COPY . .
-
-# Patch the app.py file to use the database service name for connectivity
-# and to skip the 'db' hostname attempt in local Docker
-RUN sed -i 's/DB_HOST = os.getenv.*$/DB_HOST = "db"/' app.py && \
-    sed -i 's/is_running_locally = not os.environ.get.*/is_running_locally = False/' app.py && \
-    sed -i 's/if os.path.exists.*or os.environ.get.*/if False:/' app.py
-
-# Set local-specific environment variables
-ENV DB_HOST=db \
-    DB_PORT=5432 \
-    DB_NAME=mnist_db \
-    DB_USER=postgres \
-    DB_PASSWORD=postgres
-
-# Command to run the application with development settings
-CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0"]
-
-# -----------------------------------------------------------------------------
-# Production stage
-FROM base AS remote
-
-# Copy the application code
-COPY . .
-
-# Set production-specific environment variables
-ENV STREAMLIT_SERVER_ENABLE_CORS=false
-
-# Command to run the application with production settings
-CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0"] 
+# The CMD instruction will be provided by specific environment Dockerfiles 
