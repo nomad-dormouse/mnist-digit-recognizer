@@ -106,7 +106,7 @@ export APP_PORT MODEL_PATH
 
 # Container variables
 export WEB_CONTAINER_NAME DB_CONTAINER_NAME
-export DOCKERFILE_PATH DB_VOLUME_NAME
+export DB_VOLUME_NAME
 
 # Run Docker Compose with proper environment variables
 echo -e "${GREEN}Starting Docker Compose services...${NC}"

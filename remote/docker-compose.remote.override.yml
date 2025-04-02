@@ -5,7 +5,9 @@ services:
   # WEB APPLICATION SERVICE
   web:
     build:
-      dockerfile: ${DOCKERFILE_PATH}
+      context: ..
+      dockerfile: Dockerfile
+      target: remote
     restart: unless-stopped
     deploy:
       resources:
