@@ -15,5 +15,5 @@ services:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
 volumes:
-  db-data:
+  mnist-digit-recognizer-db-volume:
     name: mnist-digit-recognizer-db-volume 

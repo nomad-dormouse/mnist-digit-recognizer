@@ -30,8 +30,20 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 # Load environment variables
+echo -e "${GREEN}Loading environment variables...${NC}"
+cd "${PROJECT_ROOT}"
+
+if [ -f ".env" ]; then
+    echo -e "${GREEN}Loading base environment variables from .env...${NC}"
+    set -a
+    source ".env"
+    set +a
+else
+    echo -e "${YELLOW}Warning: Base .env file not found. Using only local variables.${NC}"
+fi
+
 if [ -f "${SCRIPT_DIR}/.env.local" ]; then
-    echo -e "${GREEN}Loading environment variables from .env.local...${NC}"
+    echo -e "${GREEN}Loading local environment variables from .env.local...${NC}"
     set -a
     source "${SCRIPT_DIR}/.env.local"
     set +a
@@ -77,10 +89,24 @@ docker volume rm mnist-digit-recognizer-db-volume 2>/dev/null || true
 
 # Start services
 echo -e "${YELLOW}Starting services...${NC}"
+# Export all environment variables to make them available to Docker Compose
+export WEB_CONTAINER_NAME DB_CONTAINER_NAME APP_PORT DB_PORT DB_NAME DB_USER DB_PASSWORD DB_VERSION
+export POSTGRES_INITDB_ARGS PGDATA NETWORK_NAME MODEL_PATH
+
+# Run Docker Compose with proper environment variables
 docker compose ${COMPOSE_FILES} up -d --build
 
 # Wait a bit for containers to stabilize
 sleep 5
+
+# Check if containers are running
+echo -e "${YELLOW}Checking if containers are running...${NC}"
+if ! docker ps --format '{{.Names}}' | grep -q "${WEB_CONTAINER_NAME}" || ! docker ps --format '{{.Names}}' | grep -q "${DB_CONTAINER_NAME}"; then
+    echo -e "${RED}Error: Containers did not start properly. Checking logs:${NC}"
+    docker compose ${COMPOSE_FILES} logs
+    exit 1
+fi
+echo -e "${GREEN}Both containers are running!${NC}"
 
 # Wait for database to be ready
 echo -e "${YELLOW}Waiting for database to initialize...${NC}"
