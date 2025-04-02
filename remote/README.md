@@ -12,7 +12,7 @@ remote/
 ├── services.sh    # Service management functions
 ├── containers.sh  # Container management functions
 ├── environment.sh # Environment setup functions
-├── Dockerfile     # Production Dockerfile
+├── Dockerfile.remote     # Production Dockerfile
 ├── docker-compose.remote.override.yml # Docker Compose overrides for production
 ├── .env.remote    # Environment variables for remote deployment
 └── helpers/       # Helper scripts for monitoring and maintenance

@@ -38,7 +38,7 @@ project_root/
 │       └── view_mnist_samples.py  # View MNIST dataset samples
 ├── remote/            # Remote deployment components
 │   ├── deploy.sh      # Main deployment script
-│   ├── Dockerfile     # Production Dockerfile
+│   ├── Dockerfile.remote  # Production Dockerfile
 │   ├── common.sh      # Common functions
 │   ├── database.sh    # Database management
 │   ├── services.sh    # Service management
@@ -121,6 +121,16 @@ The digit recognition model is a Convolutional Neural Network (CNN) with:
 - Dropout regularization to prevent overfitting
 - 2 fully connected layers for classification
 - Trained to >99% accuracy on the MNIST dataset
+
+### Docker Configuration
+
+The project uses a base Dockerfile approach for better maintainability:
+- A base `Dockerfile` in the root directory contains common dependencies and configuration
+- Environment-specific Dockerfiles extend the base Dockerfile:
+  - `local/Dockerfile.local` for local development environment
+  - `remote/Dockerfile.remote` for production deployment
+- Each environment-specific Dockerfile adds only the settings needed for that environment
+- Docker Compose override files specify which Dockerfile to use for each environment
 
 ### Database Schema
 
