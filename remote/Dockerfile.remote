@@ -1,5 +1,7 @@
-# Production Dockerfile
-# Extends the base Dockerfile with production-specific configuration
+# REMOTE DOCKERFILE
+#
+# This file contains configuration specific to remote deployment.
+# It extends the base Dockerfile with production environment settings.
 
 FROM ${PWD}/Dockerfile
 

@@ -1,5 +1,7 @@
-# Local Development Dockerfile
-# Extends the base Dockerfile with local-specific configuration
+# LOCAL DOCKERFILE
+#
+# This file contains configuration specific to local development.
+# It extends the base Dockerfile with local environment settings.
 
 FROM ${PWD}/Dockerfile
 
@@ -11,13 +13,6 @@ COPY . .
 RUN sed -i 's/DB_HOST = os.getenv.*$/DB_HOST = "db"/' app.py && \
     sed -i 's/is_running_locally = not os.environ.get.*/is_running_locally = False/' app.py && \
     sed -i 's/if os.path.exists.*or os.environ.get.*/if False:/' app.py
-
-# Set local-specific environment variables
-ENV DB_HOST=db \
-    DB_PORT=5432 \
-    DB_NAME=mnist_db \
-    DB_USER=postgres \
-    DB_PASSWORD=postgres
 
 # Command to run the application with development settings
 CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0"] 

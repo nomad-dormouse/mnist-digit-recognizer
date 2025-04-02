@@ -1,5 +1,7 @@
-# Base Dockerfile for MNIST Digit Recognizer
-# This file contains common configuration shared by all environments
+# BASE DOCKERFILE
+#
+# This file contains common configuration shared by all environments.
+# Environment-specific settings are in Dockerfile.local and Dockerfile.remote.
 
 FROM python:3.9-slim
 
