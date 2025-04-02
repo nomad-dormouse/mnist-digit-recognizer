@@ -1,8 +1,6 @@
 #!/bin/bash
 
-# ================================================================================
 # LOCAL DEVELOPMENT RUNNER
-# ================================================================================
 # This script runs the MNIST Digit Recognizer app locally using Docker Compose.
 # 
 # Usage:
@@ -17,7 +15,6 @@
 #   - All components (app and database) run in Docker containers
 #   - Data persists between runs in a Docker volume
 #   - The web interface is available at http://localhost:8501
-# ================================================================================
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -29,7 +26,7 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-# Load environment variables
+# ENVIRONMENT VARIABLES
 echo -e "${GREEN}Loading environment variables...${NC}"
 cd "${PROJECT_ROOT}"
 
@@ -53,6 +50,7 @@ else
     exit 1
 fi
 
+# PREREQUISITES CHECK
 # Check Docker is running
 if ! docker ps &>/dev/null; then
     echo -e "${RED}Error: Docker is not running. Start Docker Desktop first.${NC}"
@@ -68,10 +66,11 @@ if [ ! -f "${MODEL_FILE}" ]; then
     exit 1
 fi
 
+# DOCKER COMPOSE CONFIGURATION
 # Define Docker Compose files
 COMPOSE_FILES="-f docker-compose.yml -f local/docker-compose.local.override.yml"
 
-# Clean up existing resources
+# RESOURCE CLEANUP
 echo -e "${YELLOW}Cleaning up existing resources...${NC}"
 cd "${PROJECT_ROOT}"
 
@@ -87,7 +86,7 @@ docker rm -f "${WEB_CONTAINER_NAME}" "${DB_CONTAINER_NAME}" 2>/dev/null || true
 echo -e "${YELLOW}Removing database volume...${NC}"
 docker volume rm mnist-digit-recognizer-db-volume 2>/dev/null || true
 
-# Start services
+# SERVICE STARTUP
 echo -e "${YELLOW}Starting services...${NC}"
 # Export all environment variables to make them available to Docker Compose
 export WEB_CONTAINER_NAME DB_CONTAINER_NAME APP_PORT DB_PORT DB_NAME DB_USER DB_PASSWORD DB_VERSION
@@ -99,6 +98,7 @@ docker compose ${COMPOSE_FILES} up -d --build
 # Wait a bit for containers to stabilize
 sleep 5
 
+# HEALTH CHECKS
 # Check if containers are running
 echo -e "${YELLOW}Checking if containers are running...${NC}"
 if ! docker ps --format '{{.Names}}' | grep -q "${WEB_CONTAINER_NAME}" || ! docker ps --format '{{.Names}}' | grep -q "${DB_CONTAINER_NAME}"; then
@@ -125,6 +125,7 @@ for i in {1..60}; do
     fi
 done
 
+# DATABASE SETUP
 # Create the predictions table
 echo -e "${YELLOW}Ensuring database is set up...${NC}"
 docker compose ${COMPOSE_FILES} exec db psql -U "${DB_USER}" -d "${DB_NAME}" -c "
@@ -136,6 +137,7 @@ docker compose ${COMPOSE_FILES} exec db psql -U "${DB_USER}" -d "${DB_NAME}" -c 
         confidence FLOAT NOT NULL
     );" > /dev/null 2>&1
 
+# USER INFORMATION
 # Show the URL and open browser
 echo -e "\n${GREEN}App running at http://localhost:${APP_PORT}${NC}"
 echo -e "${YELLOW}Opening browser...${NC}"
