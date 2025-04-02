@@ -42,11 +42,6 @@ local/.env.local
 server/deployment/.env
 server/deployment/.env.remote
 
-# Keep environment templates
-!.env.template
-!local/.env.local.template
-!server/deployment/.env.remote.template
-
 # ================================================================================
 # IDE and Editors
 # ================================================================================
