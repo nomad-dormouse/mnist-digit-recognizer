@@ -11,6 +11,7 @@
 # Requirements:
 #   - Docker Desktop running
 #   - Trained model file in model/saved_models/mnist_model.pth
+#   - .env.local file in the local directory
 #
 # Notes:
 #   - All components (app and database) run in Docker containers
@@ -23,7 +24,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 
 # Load environment variables
-source "${PROJECT_ROOT}/.env"
+if [ -f "${SCRIPT_DIR}/.env.local" ]; then
+    echo -e "${GREEN}Loading environment variables from .env.local...${NC}"
+    source "${SCRIPT_DIR}/.env.local"
+else
+    echo -e "${RED}Error: .env.local file not found in ${SCRIPT_DIR}${NC}"
+    echo -e "${YELLOW}Please create .env.local from .env.local.template${NC}"
+    exit 1
+fi
 
 # Colors
 GREEN='\033[0;32m'
