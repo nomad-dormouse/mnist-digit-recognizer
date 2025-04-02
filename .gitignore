@@ -92,6 +92,9 @@ local/*
 !local/README.md
 !local/docker-compose.local.override.yml
 !local/.env.local
+!local/run_locally.sh
+!local/helpers/
+!local/helpers/*
 
 # ================================================================================
 # Docker
