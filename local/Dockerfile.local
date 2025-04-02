@@ -3,7 +3,7 @@
 # This file contains configuration specific to local development.
 # It extends the base Dockerfile with local environment settings.
 
-FROM ${PWD}/Dockerfile
+FROM Dockerfile
 
 # Copy the application code
 COPY . .

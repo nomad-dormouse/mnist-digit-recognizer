@@ -3,7 +3,7 @@
 # This file contains configuration specific to remote deployment.
 # It extends the base Dockerfile with production environment settings.
 
-FROM ${PWD}/Dockerfile
+FROM Dockerfile
 
 # Copy the application code
 COPY . .
