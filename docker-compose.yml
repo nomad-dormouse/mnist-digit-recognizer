@@ -29,10 +29,8 @@ services:
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
-      # Prevent data loss during container recreation
-      - POSTGRES_INITDB_ARGS=--data-checksums
-      # Add the following environment variable to make init scripts run on each restart
-      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_INITDB_ARGS=${POSTGRES_INITDB_ARGS}
+      - PGDATA=${PGDATA}
     ports:
       - "${DB_PORT}:5432"
     volumes:
