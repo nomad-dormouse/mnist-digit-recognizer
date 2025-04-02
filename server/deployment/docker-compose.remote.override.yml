@@ -5,7 +5,7 @@ services:
   # WEB APPLICATION SERVICE
   web:
     build:
-      dockerfile: server/deployment/Dockerfile
+      dockerfile: ${DOCKERFILE_PATH}
     restart: unless-stopped
     deploy:
       resources:

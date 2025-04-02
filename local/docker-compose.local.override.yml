@@ -5,8 +5,8 @@ services:
   # WEB APPLICATION SERVICE
   web:
     build:
-      dockerfile: local/Dockerfile.local
+      dockerfile: ${DOCKERFILE_PATH}
     environment:
-      - MODEL_PATH=/app/model/saved_models/mnist_model.pth
+      - MODEL_PATH=${MODEL_PATH}
     volumes:
       - ./model/saved_models:/app/model/saved_models:ro
