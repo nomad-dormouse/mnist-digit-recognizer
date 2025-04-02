@@ -23,8 +23,8 @@ local_env = os.path.join(project_root, 'local', '.env.local')
 if os.path.exists(local_env):
     load_dotenv(local_env)
 else:
-    # Try server/deployment/.env for production
-    production_env = os.path.join(project_root, 'server', 'deployment', '.env')
+    # Try remote/.env for production
+    production_env = os.path.join(project_root, 'remote', '.env')
     if os.path.exists(production_env):
         load_dotenv(production_env)
     else:

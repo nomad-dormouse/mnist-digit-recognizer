@@ -4,12 +4,12 @@
 # This script deploys the MNIST Digit Recognizer app in production mode.
 # 
 # Usage:
-#   ./server/deployment/deploy.sh
+#   ./remote/deploy.sh
 #
 # Requirements:
 #   - Docker and Docker Compose installed
 #   - .env file in project root directory
-#   - .env.remote file in server/deployment directory
+#   - .env.remote file in remote directory
 #   - Trained model in model/saved_models/mnist_model.pth
 #
 # Notes:
@@ -20,7 +20,7 @@
 # INITIALIZATION
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$(dirname "${SCRIPT_DIR}")")"
+PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 
 # Define colors for output
 GREEN='\033[0;32m'
@@ -52,7 +52,7 @@ if [ -f "${SCRIPT_DIR}/.env.remote" ]; then
     set +a
 else
     echo -e "${RED}Error: .env.remote file not found in ${SCRIPT_DIR}${NC}"
-    echo -e "${YELLOW}Please create .env.remote file in the deployment directory.${NC}"
+    echo -e "${YELLOW}Please create .env.remote file in the remote directory.${NC}"
     exit 1
 fi
 
@@ -73,7 +73,7 @@ fi
 
 # DOCKER COMPOSE CONFIGURATION
 # Define Docker Compose files
-COMPOSE_FILES="-f docker-compose.yml -f server/deployment/docker-compose.remote.override.yml"
+COMPOSE_FILES="-f docker-compose.yml -f remote/docker-compose.remote.override.yml"
 
 # RESOURCE CLEANUP
 echo -e "${YELLOW}Cleaning up existing resources...${NC}"

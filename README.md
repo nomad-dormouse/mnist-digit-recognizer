@@ -27,18 +27,21 @@ This project demonstrates an end-to-end machine learning application that:
 
 ```
 project_root/
-├── app/                # Application code
+├── app.py             # Main application code
+├── init.sql           # Database initialization script
 ├── model/             # Model training and inference
-├── database/          # Database initialization scripts
 ├── local/             # Local development setup
 │   ├── Dockerfile.local  # Local development Dockerfile
-│   └── run_locally.sh    # Local development script
-├── server/            # Server-side components
-│   ├── deployment/    # Deployment configuration and scripts
-│   │   ├── deploy.sh  # Main deployment script
-│   │   ├── common.sh  # Common functions
-│   │   ├── database.sh # Database management
-│   │   └── services.sh # Service management
+│   ├── run_locally.sh    # Local development script
+│   └── helpers/       # Helper scripts for local development
+│       ├── view_local_db.sh    # View local database records
+│       └── view_mnist_samples.py  # View MNIST dataset samples
+├── remote/            # Remote deployment components
+│   ├── deploy.sh      # Main deployment script
+│   ├── Dockerfile     # Production Dockerfile
+│   ├── common.sh      # Common functions
+│   ├── database.sh    # Database management
+│   ├── services.sh    # Service management
 │   └── helpers/       # Helper scripts for monitoring
 │       ├── check_web_logs.sh
 │       └── view_db.sh
@@ -82,7 +85,7 @@ To deploy the application to a production server:
    - Create the deployment directory
 
 2. **Configure deployment:**
-   Update the deployment configuration in `server/deployment/deploy.sh`:
+   Update the deployment configuration in `remote/deploy.sh`:
    - Set your server IP
    - Configure SSH key path
    - Set database credentials
@@ -90,12 +93,12 @@ To deploy the application to a production server:
 
 3. **Run the deployment script:**
    ```bash
-   ./server/deployment/deploy.sh
+   ./remote/deploy.sh
    ```
 
 4. **Verify deployment:**
-   - Check application logs: `./server/helpers/check_web_logs.sh`
-   - View database status: `./server/helpers/view_db.sh`
+   - Check application logs: `./remote/helpers/check_web_logs.sh`
+   - View database status: `./remote/helpers/view_db.sh`
    - Access the application at `http://your-server-ip:8501`
 
 ### Database Management
@@ -106,7 +109,7 @@ The application uses PostgreSQL for storing predictions. The database is:
 - Monitored for health and connectivity
 - Protected with proper access controls
 
-For database management commands, see the [Server Helpers Guide](server/helpers/README.md).
+For database management commands, see the [Remote Helpers Guide](remote/helpers/README.md).
 
 ## Technical Details
 

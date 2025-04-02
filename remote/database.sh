@@ -81,8 +81,17 @@ initialize_database() {
         fi
         
         log "Initializing schema..."
-        if ! docker exec -i "${db_container}" psql -U "${DB_USER}" -d "${DB_NAME}" < database/init.sql; then
-            log_error "Failed to initialize schema"
+        # Initialize database schema
+        echo -e "${YELLOW}Initializing database schema...${NC}"
+        # Check if init script exists
+        if [ ! -f "${PROJECT_ROOT}/init.sql" ]; then
+            echo -e "${RED}Error: Database initialization script not found.${NC}"
+            return 1
+        fi
+        
+        # Apply database schema
+        if ! docker exec -i "${db_container}" psql -U "${DB_USER}" -d "${DB_NAME}" < "${PROJECT_ROOT}/init.sql"; then
+            echo -e "${RED}Error: Failed to initialize database schema.${NC}"
             return 1
         fi
         

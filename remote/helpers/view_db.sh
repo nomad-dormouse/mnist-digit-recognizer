@@ -6,12 +6,12 @@
 # This script shows statistics from the database on the remote server
 # 
 # Usage:
-#   ./server/helpers/view_db.sh [limit|all]
+#   ./remote/helpers/view_db.sh [limit|all]
 #
 # Examples:
-#   ./server/helpers/view_db.sh        # Default 20 records
-#   ./server/helpers/view_db.sh 50     # Show 50 records
-#   ./server/helpers/view_db.sh all    # Show all records
+#   ./remote/helpers/view_db.sh        # Default 20 records
+#   ./remote/helpers/view_db.sh 50     # Show 50 records
+#   ./remote/helpers/view_db.sh all    # Show all records
 # ================================================================================
 
 # Configuration

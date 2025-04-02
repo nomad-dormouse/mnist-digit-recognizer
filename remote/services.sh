@@ -1,5 +1,20 @@
 #!/bin/bash
 
+# ================================================================================
+# Service Management Script
+# ================================================================================
+# This script manages the MNIST Digit Recognizer services
+# 
+# Usage:
+#   ./services.sh {start|stop|restart|status}
+#
+# Options:
+#   start   - Start all services
+#   stop    - Stop all services
+#   restart - Restart all services
+#   status  - Check the status of all services
+# ================================================================================
+
 # Source common functions and variables
 # shellcheck source=./common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
@@ -16,9 +31,9 @@ create_db_check_script() {
 #!/bin/bash
 
 # Source common functions
-source /root/mnist-digit-recognizer/server/deployment/common.sh
-source /root/mnist-digit-recognizer/server/deployment/database.sh
-source /root/mnist-digit-recognizer/server/deployment/containers.sh
+source /root/mnist-digit-recognizer/remote/common.sh
+source /root/mnist-digit-recognizer/remote/database.sh
+source /root/mnist-digit-recognizer/remote/containers.sh
 
 log "Starting database check"
 ensure_project_dir

@@ -6,10 +6,10 @@
 # This script shows the logs from the web container on the remote server
 # 
 # Usage:
-#   ./server/check_web_logs.sh [number_of_lines]
+#   ./remote/check_web_logs.sh [number_of_lines]
 #
 # Example:
-#   ./server/check_web_logs.sh 100     # Show the last 100 lines
+#   ./remote/check_web_logs.sh 100     # Show the last 100 lines
 # ================================================================================
 
 # Configuration
