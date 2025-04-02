@@ -36,7 +36,7 @@ services:
     ports:
       - "${DB_PORT}:5432"
     volumes:
-      - mnist-digit-recogniser-db-volume:/var/lib/postgresql/data
+      - ${DB_VOLUME_NAME}:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
@@ -52,5 +52,5 @@ networks:
 
 # VOLUME CONFIGURATION
 volumes:
-  mnist-digit-recogniser-db-volume:
-    name: ${DB_VOLUME_NAME} 
+  ${DB_VOLUME_NAME}:
+    name: ${DB_VOLUME_NAME}
