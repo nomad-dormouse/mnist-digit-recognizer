@@ -1,108 +1,79 @@
 #!/bin/bash
+# Local deployment wrapper for MNIST Digit Recognizer
 
-# LOCAL DEVELOPMENT SCRIPT
-# This script runs the MNIST Digit Recognizer app in development mode.
-# 
-# Usage:
-#   ./local/deploy_locally.sh
-#
-# Requirements:
-#   - Docker and Docker Compose installed
-#   - .env file in project root directory
-#   - Trained model in model/saved_models/mnist_model.pth
-
-# Get the project root directory
+# Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
-export PROJECT_ROOT
-cd "${PROJECT_ROOT}"
 
-# Define colors for output
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+# Change to project root directory
+cd "$PROJECT_ROOT"
 
-# Load environment variables
-if [ -f ".env" ]; then
-    echo -e "${GREEN}Loading environment variables from .env...${NC}"
-    set -a
-    source ".env"
-    set +a
-else
-    echo -e "${RED}Error: .env file not found.${NC}"
-    exit 1
+# Set local environment variables
+export IS_DEVELOPMENT=true
+export PORT=8501
+export DB_CONTAINER_NAME=mnist-digit-recognizer-db
+export WEB_CONTAINER_NAME=mnist-digit-recognizer-web
+export DB_NAME=mnist_db
+export DB_USER=postgres
+export DB_PASSWORD=postgres
+export DB_HOST=db
+export DB_PORT=5432
+
+# Create local override file if it doesn't exist
+OVERRIDE_FILE="docker-compose.override.yml"
+if [ ! -f "$OVERRIDE_FILE" ]; then
+    cat > "$OVERRIDE_FILE" << EOF
+version: '3.8'
+
+services:
+  web:
+    ports:
+      - "${PORT}:8501"
+    volumes:
+      - ./:/app
+    environment:
+      - KMP_DUPLICATE_LIB_OK=TRUE
+      - IS_DEVELOPMENT=true
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=mnist_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    depends_on:
+      - db
+
+  db:
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=mnist_db
+
+volumes:
+  postgres_data:
+EOF
+    echo "Created local override file: $OVERRIDE_FILE"
 fi
 
-# Check if Docker is running
-if ! docker ps &>/dev/null; then
-    echo -e "${RED}Error: Docker is not running. Start Docker Desktop first.${NC}"
-    exit 1
-fi
+# Run the main deployment script with local settings
+"$SCRIPT_DIR/deploy_base.sh" -e development -f docker-compose.yml "$@"
 
-# Check if model file exists
-if [ ! -f "${PROJECT_ROOT}/model/saved_models/mnist_model.pth" ]; then
-    echo -e "${RED}Error: Model file not found. Please run the training script first.${NC}"
-    exit 1
-fi
-
-# Stop any existing containers
-echo -e "${YELLOW}Stopping any existing containers...${NC}"
-docker compose down --remove-orphans
-
-# Start services
-echo -e "${GREEN}Starting services...${NC}"
-docker compose up -d --build
-
-# Wait for containers to stabilize
-echo -e "${YELLOW}Waiting for containers to initialize...${NC}"
-sleep 5
-
-# Check if containers are running
-echo -e "${YELLOW}Checking if containers are running...${NC}"
-if ! docker ps --format '{{.Names}}' | grep -q "${WEB_CONTAINER_NAME}"; then
-    echo -e "${RED}Error: Web container failed to start. Checking logs:${NC}"
-    docker compose logs web
-    exit 1
-fi
-echo -e "${GREEN}Web container is running!${NC}"
-
-# Wait for database to be ready
-echo -e "${YELLOW}Waiting for database to initialize...${NC}"
-MAX_RETRIES=30
-for i in $(seq 1 $MAX_RETRIES); do
-    if docker compose exec db pg_isready -U "${DB_USER}" &>/dev/null; then
-        echo -e "${GREEN}Database is ready!${NC}"
-        break
-    fi
-    echo -n "."
-    sleep 2
+# If 'up' action and no errors, open browser
+if [[ $? -eq 0 && ("$1" == "up" || $# -eq 0) ]]; then
+    # Wait a moment for the application to fully start
+    sleep 5
     
-    if [ $i -eq $MAX_RETRIES ]; then
-        echo -e "\n${RED}Database did not initialize in time. Check logs:${NC}"
-        docker compose logs db
-        exit 1
+    # Open browser (works on macOS, Linux with xdg-open, or Windows with start)
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        open "http://localhost:${PORT}"
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        xdg-open "http://localhost:${PORT}" &>/dev/null
+    elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
+        start "http://localhost:${PORT}"
+    else
+        echo "Browser not opened automatically. Visit: http://localhost:${PORT}"
     fi
-done
-
-# Ensure database table exists
-echo -e "${YELLOW}Setting up database...${NC}"
-docker compose exec db psql -U "${DB_USER}" -d "${DB_NAME}" -c "
-    CREATE TABLE IF NOT EXISTS predictions (
-        id SERIAL PRIMARY KEY,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        predicted_digit INTEGER NOT NULL,
-        true_label INTEGER,
-        confidence FLOAT NOT NULL
-    );" > /dev/null 2>&1
-
-# Show app URL and open browser
-echo -e "\n${GREEN}App running at http://localhost:${APP_PORT}${NC}"
-echo -e "${YELLOW}Opening browser...${NC}"
-open "http://localhost:${APP_PORT}"
-
-# Show helpful commands
-echo -e "\n${YELLOW}Helpful commands:${NC}"
-echo -e "  ${GREEN}docker compose logs -f web${NC}  - View application logs"
-echo -e "  ${GREEN}docker compose exec db psql -U ${DB_USER} -d ${DB_NAME}${NC} - Connect to database"
-echo -e "  ${GREEN}docker compose down${NC} - Stop containers (preserving data)"
+fi

@@ -70,6 +70,8 @@ logs/
 local/*
 !local/README.md
 !local/deploy_locally.sh
+!local/deploy_base.sh
+!local/deploy_remotely.sh
 !local/view_local_db.sh
 !local/view_mnist_samples.py
 !local/mnist_samples.html
