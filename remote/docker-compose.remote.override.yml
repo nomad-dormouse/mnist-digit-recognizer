@@ -5,10 +5,12 @@ services:
   # WEB APPLICATION SERVICE
   web:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile
-      target: remote
     restart: unless-stopped
+    environment:
+      - STREAMLIT_SERVER_ENABLE_CORS=false
+      - IS_DEVELOPMENT=false
     deploy:
       resources:
         limits:
@@ -20,6 +22,8 @@ services:
   # DATABASE SERVICE
   db:
     restart: unless-stopped
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     deploy:
       resources:
         limits:

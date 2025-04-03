@@ -32,44 +32,25 @@ DB_NAME = os.getenv('DB_NAME', 'mnist_db')
 DB_USER = os.getenv('DB_USER', 'postgres')
 DB_PASSWORD = os.getenv('DB_PASSWORD', 'postgres')
 
-# Check if we're running directly on the host machine (not in Docker)
-is_running_locally = not os.environ.get('HOSTNAME', '').startswith('mnist-digit-')
+# Check if we're running in development mode
+is_development = os.getenv('IS_DEVELOPMENT', 'false').lower() == 'true'
 
-# If running locally and DB_HOST is set to 'db', we need to use localhost instead
-if is_running_locally and DB_HOST == 'db':
+# If running in development mode on a local machine and DB_HOST is 'db', 
+# we may need to adjust it for direct connections
+if is_development and not os.path.exists('/.dockerenv') and DB_HOST == 'db':
     DB_HOST = 'localhost'
 
 def get_db_connection():
     """Connect to the database using environment variables."""
-    error_msg = None
-    
     # Log connection attempt for debugging
     connection_params = {
         'host': DB_HOST,
         'port': DB_PORT,
         'dbname': DB_NAME,
         'user': DB_USER,
-        'password': '****' # masked for security
+        'password': '****'  # masked for security
     }
     print(f"Attempting database connection with: {connection_params}")
-    
-    # When in Docker, always try 'db' hostname first
-    if os.path.exists('/.dockerenv') or os.environ.get('HOSTNAME', '').startswith('mnist-digit-'):
-        print("Docker environment detected, trying 'db' hostname first...")
-        try:
-            conn = psycopg2.connect(
-                host='db',
-                port=DB_PORT,
-                dbname=DB_NAME,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                connect_timeout=10
-            )
-            print("Docker network connection successful")
-            return conn
-        except psycopg2.Error as e:
-            error_msg = f"Docker network connection failed: {str(e)}"
-            print(error_msg)
     
     try:
         conn = psycopg2.connect(
@@ -78,16 +59,16 @@ def get_db_connection():
             dbname=DB_NAME,
             user=DB_USER,
             password=DB_PASSWORD,
-            connect_timeout=10  # Increased timeout
+            connect_timeout=10
         )
         print("Database connection successful")
         return conn
     except psycopg2.Error as e:
-        error_msg = f"Primary connection failed: {str(e)}"
+        error_msg = f"Database connection failed: {str(e)}"
         print(error_msg)
         
-        # Try fallback connection if needed
-        if DB_HOST != 'db':
+        # Try alternative connection if needed
+        if DB_HOST != 'db' and not is_development:
             try:
                 print("Trying fallback connection to 'db' service...")
                 conn = psycopg2.connect(
@@ -100,11 +81,9 @@ def get_db_connection():
                 )
                 print("Fallback connection successful")
                 return conn
-            except psycopg2.Error as e:
-                error_msg = f"{error_msg}\nFallback connection failed: {str(e)}"
-                print(f"Fallback connection failed: {str(e)}")
+            except psycopg2.Error as e2:
+                print(f"Fallback connection failed: {str(e2)}")
         
-        print(f"All connection attempts failed: {error_msg}")
         return None
 
 def log_prediction(prediction, true_label, confidence):
