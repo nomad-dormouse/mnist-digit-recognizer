@@ -132,7 +132,7 @@ def load_model():
     model = MNISTModel().to(device)
     
     # Get model path from environment variable
-    model_path = os.getenv('MODEL_PATH', '/app/model/saved_models/mnist_model.pth')
+    model_path = os.getenv('MODEL_PATH', '/model/saved_models/mnist_model.pth')
     
     # Check if model exists at the specified path
     if not os.path.exists(model_path):

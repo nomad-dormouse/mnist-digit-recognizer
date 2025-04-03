@@ -8,6 +8,3 @@ services:
       - MODEL_PATH=${MODEL_PATH}
       - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
       - IS_DEVELOPMENT=true
-    volumes:
-      - ./model/saved_models:/app/model/saved_models:ro
-      - ..:/app:ro  # Mount the code for hot reloading

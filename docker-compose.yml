@@ -18,7 +18,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - PYTHONUNBUFFERED=1
     volumes:
-      - ./model/saved_models:/app/model/saved_models:ro
+      - ./model/saved_models:/model/saved_models:ro
     depends_on:
       - db
 
