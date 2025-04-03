@@ -12,7 +12,7 @@ A full-stack machine learning application that allows users to draw digits and g
 - Interactive web interface with drawing canvas (Streamlit)
 - Database for prediction logging and analytics (PostgreSQL)
 - Containerized deployment with Docker and Docker Compose
-- Automated deployment pipeline
+- Automated deployment pipeline for both local and remote environments
 
 ## Project Overview
 
@@ -27,34 +27,25 @@ This project demonstrates an end-to-end machine learning application that:
 
 ```
 project_root/
-├── app.py             # Main application code
-├── deploy.sh          # Main deployment script
-├── init.sql           # Database initialization script
-├── Dockerfile         # Multi-stage Dockerfile for all environments
-├── docker-compose.yml # Docker Compose configuration
-├── .env               # Environment variables (consolidated)
-├── model/             # Model training and inference
-│   ├── model.py       # Model definition
-│   ├── train.py       # Model training script
-│   ├── data/          # MNIST dataset storage
-│   └── saved_models/  # Trained model weights
-└── local/             # Local development setup
-    ├── deploy_locally.sh    # Local development script
-    ├── view_local_db.sh     # View local database records
-    ├── view_mnist_samples.py # View MNIST dataset samples
-    └── mnist_samples.html   # Pre-generated HTML with MNIST samples
+├── app.py                # Main application code
+├── deploy.sh             # Main deployment script for both local and remote
+├── deploy_remotely.sh    # Script for deploying to remote server
+├── init.sql              # Database initialization script
+├── Dockerfile            # Multi-stage Dockerfile for all environments
+├── docker-compose.yml    # Docker Compose configuration
+├── .env                  # Environment variables (consolidated)
+├── model/                # Model training and inference
+│   ├── model.py          # Model definition
+│   ├── train.py          # Model training script
+│   ├── data/             # MNIST dataset storage
+│   └── saved_models/     # Trained model weights
+└── helpers/              # Helper utilities and tools
+    ├── view_local_db.sh       # View local database records
+    ├── view_mnist_samples.py  # View MNIST dataset samples
+    └── mnist_samples.html     # Pre-generated HTML with MNIST samples
 ```
 
 ## Local Development
-
-For detailed instructions on setting up and running the application locally, please refer to the [Local Development Guide](local/README.md).
-
-This includes:
-- Quick setup with Docker
-- Manual setup instructions
-- Database initialization and management
-- Environment configuration
-- Development tools and utilities
 
 ### Quick Start
 
@@ -66,38 +57,60 @@ This includes:
 
 2. Configure your environment by editing the `.env` file if needed.
 
-3. Run the local development script:
+3. Run the local deployment script:
    ```bash
-   ./local/deploy_locally.sh
+   ./deploy.sh local up
    ```
 
 The application will be available at `http://localhost:8501`
 
+### Helper Tools
+
+For development and debugging, several helper tools are available in the `helpers` directory:
+
+- **Database Viewer**: `./helpers/view_local_db.sh` - Connects to the local PostgreSQL database
+- **MNIST Samples Viewer**: `./helpers/view_mnist_samples.py` - Generates visualizations of MNIST digits
+
+For detailed instructions on using these tools, refer to the [Helpers README](helpers/README.md).
+
 ## Deployment
 
-To deploy the application to a production server:
+The application can be deployed in both local and remote environments using the same deployment scripts.
 
-1. **Prepare the server:**
-   - Install Docker and Docker Compose
-   - Set up SSH access with your key
-   - Create the deployment directory
+### Local Deployment
 
-2. **Configure deployment:**
-   Update the deployment configuration in `.env`:
+```bash
+./deploy.sh local [action]
+```
+
+Actions include:
+- `up` - Start the application (default)
+- `down` - Stop the application
+- `restart` - Restart the application
+- `logs` - View application logs
+- `status` - Check application status
+
+### Remote Deployment
+
+To deploy to a remote production server:
+
+1. **Configure remote settings in `.env`**:
    - Set your server IP in `REMOTE_HOST`
-   - Configure SSH key path in `SSH_KEY`
-   - Set database credentials if needed
-   - Adjust other deployment settings as needed
+   - Configure SSH key path in `SSH_KEY` 
+   - Set remote user in `REMOTE_USER`
+   - Set remote directory in `REMOTE_DIR`
 
-3. **Run the deployment script:**
+2. **Deploy using the remote deployment script**:
    ```bash
-   ./deploy.sh
+   ./deploy_remotely.sh
    ```
 
-4. **Verify deployment:**
-   - Check application logs: `./deploy.sh logs`
-   - View database content: `./deploy.sh db`
-   - Check application status: `./deploy.sh status`
+3. **Manage remote deployment**:
+   ```bash
+   ./deploy_remotely.sh status    # Check status
+   ./deploy_remotely.sh down      # Stop application
+   ./deploy_remotely.sh restart   # Restart application
+   ```
 
 ### Database Management
 
@@ -105,7 +118,8 @@ The application stores predictions in a PostgreSQL database, which persists betw
 
 Key features:
 - Prediction history is displayed in the web interface
-- Historical data can be exported for analysis
+- Historical data can be queried using the database viewer tool
+- Database is automatically backed up periodically
 
 ## Technical Details
 
@@ -122,7 +136,7 @@ The digit recognition model is a Convolutional Neural Network (CNN) with:
 
 The project uses a consolidated approach to environment variables:
 - A single `.env` file in the root directory contains all configuration for both local and remote environments
-- Environment variables are loaded in both development and production
+- Environment variables are loaded by all scripts and containers
 - The application adapts its behavior based on the environment it's running in
 - Docker Compose loads variables from the same file for consistent configuration
 
@@ -131,9 +145,7 @@ The project uses a consolidated approach to environment variables:
 The project uses a simple but effective Docker approach:
 - A single `Dockerfile` for the application
 - A single `docker-compose.yml` file for container orchestration
-- The `IS_DEVELOPMENT` environment variable controls application behavior:
-  - Set to `true` by default (enables hot reloading, debug options)
-  - Set to `false` for production deployment (enables optimizations)
+- Environment variables control application behavior for different deployments
 
 ### Database Schema
 
