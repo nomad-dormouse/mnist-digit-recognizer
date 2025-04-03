@@ -38,11 +38,10 @@ project_root/
 │   ├── data/          # MNIST dataset storage
 │   └── saved_models/  # Trained model weights
 ├── local/             # Local development setup
-│   ├── docker-compose.local.override.yml  # Local Docker Compose overrides
-│   ├── run_locally.sh    # Local development script
-│   └── helpers/       # Helper scripts for local development
-│       ├── view_local_db.sh    # View local database records
-│       └── view_mnist_samples.py  # View MNIST dataset samples
+│   ├── deploy_locally.sh    # Local development script
+│   ├── view_local_db.sh     # View local database records
+│   ├── view_mnist_samples.py # View MNIST dataset samples
+│   └── mnist_samples.html   # Pre-generated HTML with MNIST samples
 └── remote/            # Remote deployment components
     ├── deploy.sh      # Main deployment script
     ├── docker-compose.remote.override.yml  # Remote Docker Compose overrides
@@ -77,7 +76,7 @@ This includes:
 
 3. Run the local development script:
    ```bash
-   ./local/run_locally.sh
+   ./local/deploy_locally.sh
    ```
 
 The application will be available at `http://localhost:8501`
