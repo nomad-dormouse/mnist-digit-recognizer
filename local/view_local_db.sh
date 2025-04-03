@@ -1,54 +1,39 @@
 #!/bin/bash
+# View records from the local MNIST database
+# Usage: ./local/view_local_db.sh [limit|all]
 
-# LOCAL DATABASE VIEWER
-# This script views the local Docker containerized database.
-# 
-# Usage:
-#   ./local/helpers/view_local_db.sh           # Default 20 records
-#   ./local/helpers/view_local_db.sh 50        # Show 50 records
-#   ./local/helpers/view_local_db.sh all       # Show all records
-
-# INITIALIZATION
-# Get the directory where this script is located
+# Get directory paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PARENT_DIR="$(dirname "${SCRIPT_DIR}")"
 PROJECT_ROOT="$(dirname "${PARENT_DIR}")"
 
-# Define colors for output
+# Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 RED='\033[0;31m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# ENVIRONMENT VARIABLES
-# Load environment variables if they exist
-if [ -f "${PROJECT_ROOT}/.env" ]; then
-    source "${PROJECT_ROOT}/.env"
-fi
+# Load environment variables
+[ -f "${PROJECT_ROOT}/.env" ] && source "${PROJECT_ROOT}/.env"
 
-# Database settings (use environment variables or defaults)
+# Database settings
 DB_CONTAINER="${DB_CONTAINER_NAME:-mnist-digit-recognizer-db}"
 DB_NAME="${DB_NAME:-mnist_db}"
 DB_USER="${DB_USER:-postgres}"
 
-# Parse command line arguments
-LIMIT=20  # Default number of records to show
+# Set record limit
+LIMIT=20
+[[ "$1" == "all" ]] && LIMIT="ALL"
+[[ "$1" =~ ^[0-9]+$ ]] && LIMIT="$1"
 
-if [[ "$1" == "all" ]]; then
-    LIMIT="ALL"
-elif [[ "$1" =~ ^[0-9]+$ ]]; then
-    LIMIT="$1"
-fi
-
-# PREREQUISITES CHECK
-# Check if Docker is running
+# Check Docker
 if ! docker ps &>/dev/null; then
     echo -e "${RED}Error: Docker is not running. Start Docker Desktop first.${NC}"
     exit 1
 fi
 
-# Check if database container is running
+# Check database container
 if ! docker ps -q -f name="^${DB_CONTAINER}$" &>/dev/null; then
     echo -e "${RED}Error: Database container '${DB_CONTAINER}' is not running.${NC}"
     echo -e "Run ${YELLOW}./local/deploy_locally.sh${NC} to start the application."
@@ -57,39 +42,31 @@ fi
 
 echo -e "${YELLOW}Viewing local database records (limit: $LIMIT)...${NC}"
 
-# DATABASE QUERIES
-# Query functions
-docker_db_query() {
-    docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -c "$1"
-}
+# Define query functions
+docker_db_query() { docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -c "$1"; }
+docker_db_value() { docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -tAc "$1"; }
 
-docker_db_value() {
-    docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -tAc "$1"
-}
-
-# Check if predictions table exists
+# Check predictions table
 if ! docker exec ${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -c "\dt predictions" | grep -q "predictions"; then
     echo -e "${RED}Error: Table 'predictions' does not exist.${NC}"
     echo -e "Run ${YELLOW}./local/deploy_locally.sh${NC} to initialize the database."
     exit 1
 fi
 
-# ANALYTICS
 # Get statistics
 TOTAL_RECORDS=$(docker_db_value "SELECT COUNT(*) FROM predictions;")
 LABELED_RECORDS=$(docker_db_value "SELECT COUNT(*) FROM predictions WHERE true_label IS NOT NULL;")
 CORRECT_PREDICTIONS=$(docker_db_value "SELECT COUNT(*) FROM predictions WHERE predicted_digit = true_label;")
 
-# Display basic statistics
+# Display stats
 echo -e "${GREEN}Total records: ${TOTAL_RECORDS} | Labeled records: ${LABELED_RECORDS} | Correct predictions: ${CORRECT_PREDICTIONS}${NC}"
 
-# Calculate and display accuracy
+# Calculate accuracy
 if [ "$LABELED_RECORDS" != "0" ]; then
     ACCURACY=$(echo "scale=2; ($CORRECT_PREDICTIONS / $LABELED_RECORDS) * 100" | bc)
     echo -e "${BLUE}Overall accuracy: ${ACCURACY}%${NC}"
 fi
 
-# DATA VISUALIZATION
 # Display recent predictions
 echo -e "\n${YELLOW}Recent predictions:${NC}"
 docker_db_query "
@@ -110,7 +87,7 @@ docker_db_query "
     GROUP BY predicted_digit 
     ORDER BY predicted_digit;"
 
-# Display accuracy by digit if we have labeled data
+# Display accuracy by digit
 if [ "$LABELED_RECORDS" -gt 0 ]; then
     echo -e "\n${YELLOW}Accuracy by digit:${NC}"
     docker_db_query "
@@ -132,7 +109,5 @@ if [ "$LABELED_RECORDS" -gt 0 ]; then
         ORDER BY true_label;"
 fi
 
-# USER INFORMATION
 echo -e "\n${GREEN}Local database query complete.${NC}"
-echo -e "To view more or fewer records, use: ${YELLOW}./local/helpers/view_local_db.sh [limit|all]${NC}"
-echo -e "To view server database, use: ${YELLOW}./remote/helpers/view_db.sh${NC}" 
+echo -e "To view more or fewer records, use: ${YELLOW}./local/view_local_db.sh [limit|all]${NC}" 
