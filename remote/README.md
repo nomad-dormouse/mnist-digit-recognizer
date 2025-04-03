@@ -14,52 +14,43 @@ remote/
 ├── environment.sh # Environment setup functions
 ├── Dockerfile.remote     # Production Dockerfile
 ├── docker-compose.remote.override.yml # Docker Compose overrides for production
-├── .env.remote    # Environment variables for remote deployment
+├── README.md                          # This file
 └── helpers/       # Helper scripts for monitoring and maintenance
     ├── check_web_logs.sh # View web application logs
     └── view_db.sh        # View database status
 ```
 
+## Overview
+
+The `remote/` directory contains files related to deploying the MNIST Digit Recognizer application to a remote server using Docker Compose.
+
+The main components include:
+- `deploy.sh`: A bash script that deploys the application to a remote server
+- `docker-compose.remote.override.yml`: Docker Compose configuration overrides specific to remote deployment
+- Loads environment variables from `.env`
+
 ## Deployment Process
 
-The deployment process consists of several steps:
+The recommended remote deployment flow is:
 
-1. **Environment Setup**
-   - Loads environment variables from `.env` and `.env.remote`
-   - Checks prerequisites (Docker, model file)
-   - Prepares for deployment
-
-2. **Application Deployment**
-   - Configures Docker Compose services
-   - Builds images with production settings
-   - Launches containers with resource constraints
-
-3. **Database Management**
-   - Initializes PostgreSQL database
-   - Creates required tables if they don't exist
-   - Ensures proper connections between services
-
-4. **Health Checks**
-   - Verifies that containers are running
-   - Checks database connectivity
-   - Ensures web application is accessible
-
-## Usage
-
-To deploy the application:
-
-1. Configure your deployment settings in `.env.remote`:
-   ```bash
-   SSH_KEY="/path/to/your/ssh/key"
-   REMOTE_HOST="your-server-ip"
-   REMOTE_USER="root"
-   REMOTE_DIR="/root/mnist-digit-recognizer"
-   ```
-
-2. Run the deployment script:
+1. Configure your deployment environment variables in `.env` file
+2. Make sure you have SSH access to the remote server
+3. From the project root, run the deployment script:
    ```bash
    ./remote/deploy.sh
    ```
+4. Access the deployed application at http://your-server-ip:8501
+
+## Configuration
+
+Environment variables are defined in the `.env` file at the project root. This file contains all necessary configuration for both local development and remote deployment environments.
+
+Key deployment configurations include:
+- Remote server SSH details
+- Database connection details
+- Container and volume names
+- Port mappings
+- Backup settings
 
 ## Monitoring and Maintenance
 
@@ -83,19 +74,10 @@ To deploy the application:
 
 Common issues and solutions:
 
-1. **Database Connection Issues**
-   - Check if PostgreSQL container is running: `docker ps | grep db`
-   - Verify network configuration in docker-compose files
-   - Ensure database initialization completed: check logs
-
-2. **Application Startup Failures**
-   - Check Docker logs: `docker logs mnist-digit-recognizer-web`
-   - Verify environment variables in .env and .env.remote
-   - Ensure model file exists in model/saved_models/
-
-3. **Permission Issues**
-   - Check file ownership and permissions
-   - Ensure Docker has necessary permissions
+- **SSH Connection Issues**: Verify SSH key path and permissions
+- **Docker not available**: Ensure Docker and Docker Compose are installed on the remote server
+- **Container startup issues**: Check logs with `docker logs container-name`
+- **Configuration issues**: Verify environment variables in `.env`
 
 ## Backup and Recovery
 

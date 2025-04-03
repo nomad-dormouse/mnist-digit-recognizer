@@ -5,10 +5,8 @@
 # - Local development environment configuration
 # - Remote production environment configuration
 
-# ============================================================
 # BASE STAGE
 # Common configuration shared by all environments
-# ============================================================
 FROM python:3.9-slim AS base
 
 WORKDIR /app
@@ -36,10 +34,8 @@ ENV PYTHONUNBUFFERED=1 \
 # Expose the port Streamlit will run on
 EXPOSE 8501
 
-# ============================================================
 # LOCAL STAGE
 # Configuration for local development environment
-# ============================================================
 FROM base AS local
 
 # Copy the application code
@@ -54,10 +50,8 @@ RUN sed -i 's/DB_HOST = os.getenv.*$/DB_HOST = "db"/' app.py && \
 # Command to run the application with development settings
 CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0"]
 
-# ============================================================
 # REMOTE STAGE
 # Configuration for remote production environment
-# ============================================================
 FROM base AS remote
 
 # Copy the application code

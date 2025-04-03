@@ -1,58 +1,56 @@
 #!/bin/bash
 
-# PRODUCTION DEPLOYMENT SCRIPT
-# This script deploys the MNIST Digit Recognizer app in production mode.
-# 
-# Usage:
-#   ./remote/deploy.sh
-#
-# Requirements:
-#   - Docker and Docker Compose installed
-#   - .env file in project root directory
-#   - .env.remote file in remote directory
-#   - Trained model in model/saved_models/mnist_model.pth
-#
-# Notes:
-#   - Run this script from the project root directory
-#   - The web interface will be available at http://your-server:8501
-#   - Database data persists between deployments
+# REMOTE DEPLOYMENT SCRIPT
+# This script deploys the MNIST Digit Recognizer application to a remote server.
 
-# INITIALIZATION
-# Get the directory where this script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
-
-# Define colors for output
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
+# Color settings for output
 RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# ENVIRONMENT VARIABLES
-echo -e "${GREEN}Loading environment variables...${NC}"
-cd "${PROJECT_ROOT}"
+# Load environment variables
+#   - .env file in root directory
+SCRIPT_DIR=$(dirname "$0")
+ROOT_DIR=$(realpath "${SCRIPT_DIR}/..")
 
-# Load base environment variables
-if [ -f ".env" ]; then
-    echo -e "${GREEN}Loading base environment variables from .env...${NC}"
-    set -a
-    source ".env"
-    set +a
-else
-    echo -e "${RED}Error: Base .env file not found.${NC}"
-    echo -e "${YELLOW}Please ensure you have a .env file in the project root.${NC}"
+echo -e "${BLUE}=========================================================${NC}"
+echo -e "${BLUE}MNIST DIGIT RECOGNIZER - REMOTE DEPLOYMENT${NC}"
+echo -e "${BLUE}=========================================================${NC}"
+
+# Check for required dependencies
+echo -e "${BLUE}Checking dependencies...${NC}"
+DEPS=("ssh" "scp" "git")
+MISSING_DEPS=()
+
+for dep in "${DEPS[@]}"; do
+    if ! command -v "$dep" &> /dev/null; then
+        MISSING_DEPS+=("$dep")
+    fi
+done
+
+if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
+    echo -e "${RED}Error: The following dependencies are missing:${NC}"
+    for dep in "${MISSING_DEPS[@]}"; do
+        echo -e "${RED}- $dep${NC}"
+    done
+    echo -e "${YELLOW}Please install them before continuing.${NC}"
     exit 1
 fi
 
-# Load remote environment variables
-if [ -f "${SCRIPT_DIR}/.env.remote" ]; then
-    echo -e "${GREEN}Loading remote environment variables from .env.remote...${NC}"
+echo -e "${GREEN}All dependencies found.${NC}"
+
+# Load environment variables from the root .env file
+if [ -f "${ROOT_DIR}/.env" ]; then
+    echo -e "${GREEN}Loading environment variables from .env...${NC}"
+    # Use set -a to automatically export all variables
     set -a
-    source "${SCRIPT_DIR}/.env.remote"
+    source "${ROOT_DIR}/.env"
     set +a
 else
-    echo -e "${RED}Error: .env.remote file not found in ${SCRIPT_DIR}${NC}"
-    echo -e "${YELLOW}Please create .env.remote file in the remote directory.${NC}"
+    echo -e "${RED}Error: .env file not found in ${ROOT_DIR}${NC}"
+    echo -e "${YELLOW}Please create .env file in the root directory.${NC}"
     exit 1
 fi
 
@@ -64,7 +62,7 @@ if ! docker ps &>/dev/null; then
 fi
 
 # Check if model file exists
-MODEL_FILE="${PROJECT_ROOT}/model/saved_models/mnist_model.pth"
+MODEL_FILE="${ROOT_DIR}/model/saved_models/mnist_model.pth"
 if [ ! -f "${MODEL_FILE}" ]; then
     echo -e "${RED}Error: Model file not found at ${MODEL_FILE}${NC}"
     echo -e "${YELLOW}Please run the training script to generate the model first.${NC}"
@@ -77,7 +75,7 @@ COMPOSE_FILES="-f docker-compose.yml -f remote/docker-compose.remote.override.ym
 
 # RESOURCE CLEANUP
 echo -e "${YELLOW}Cleaning up existing resources...${NC}"
-cd "${PROJECT_ROOT}"
+cd "${ROOT_DIR}"
 
 # Stop and remove any previous Docker Compose setup (preserving volumes)
 echo -e "${YELLOW}Stopping existing containers (preserving volumes)...${NC}"

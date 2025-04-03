@@ -18,17 +18,12 @@ from model.model import MNISTModel
 # Load environment variables
 project_root = os.path.dirname(os.path.abspath(__file__))
 
-# First try local/.env.local for local development
-local_env = os.path.join(project_root, 'local', '.env.local')
-if os.path.exists(local_env):
-    load_dotenv(local_env)
+# Load environment variables from .env file
+env_file = os.path.join(project_root, '.env')
+if os.path.exists(env_file):
+    load_dotenv(env_file)
 else:
-    # Try remote/.env for production
-    production_env = os.path.join(project_root, 'remote', '.env')
-    if os.path.exists(production_env):
-        load_dotenv(production_env)
-    else:
-        print("Warning: No environment file found. Using default values.")
+    print("Warning: No environment file found. Using default values.")
 
 # Database connection parameters
 DB_HOST = os.getenv('DB_HOST', 'localhost')
@@ -157,27 +152,23 @@ def load_model():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = MNISTModel().to(device)
     
-    # Get the absolute path to the model file
-    project_root = os.path.dirname(os.path.abspath(__file__))
+    # Get model path from environment variable
+    model_path = os.getenv('MODEL_PATH', '/app/model/saved_models/mnist_model.pth')
     
-    # Define possible model paths (local development vs Docker)
-    possible_paths = [
-        os.path.join(project_root, 'model', 'saved_models', 'mnist_model.pth'),  # Local path
-        '/app/model/saved_models/mnist_model.pth'                               # Docker path
-    ]
-    
-    # Try each path until we find the model
-    model_path = None
-    for path in possible_paths:
-        if os.path.exists(path):
-            model_path = path
-            print(f"Found model at: {model_path}")
-            break
-    
-    if model_path is None:
-        st.error(f"Model file not found. Checked paths: {', '.join(possible_paths)}")
-        return None
+    # Check if model exists at the specified path
+    if not os.path.exists(model_path):
+        # Fallback to local development path as a backup
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        fallback_path = os.path.join(project_root, 'model', 'saved_models', 'mnist_model.pth')
         
+        if os.path.exists(fallback_path):
+            model_path = fallback_path
+            print(f"Using fallback model path: {model_path}")
+        else:
+            st.error(f"Model file not found at: {model_path} or {fallback_path}")
+            return None
+    
+    print(f"Loading model from: {model_path}")
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
     return model

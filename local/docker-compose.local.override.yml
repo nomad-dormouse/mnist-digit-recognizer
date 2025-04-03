@@ -5,10 +5,10 @@ services:
   # WEB APPLICATION SERVICE
   web:
     build:
-      context: ..
+      context: .
       dockerfile: Dockerfile
       target: local
     environment:
       - MODEL_PATH=${MODEL_PATH}
     volumes:
-      - ../model/saved_models:/app/model/saved_models:ro
+      - ./model/saved_models:/app/model/saved_models:ro

@@ -43,7 +43,7 @@ GRID_SIZE = 5  # 5x5 grid
 # Load MNIST dataset
 print("Loading MNIST dataset...")
 mnist_train = torchvision.datasets.MNIST(
-    root='./data', 
+    root='../../model/data', 
     train=True, 
     download=True, 
     transform=torchvision.transforms.ToTensor()

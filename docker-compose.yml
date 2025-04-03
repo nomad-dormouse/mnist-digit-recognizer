@@ -7,6 +7,7 @@ services:
     container_name: ${WEB_CONTAINER_NAME}
     build:
       context: .
+      dockerfile: Dockerfile
     ports:
       - "${APP_PORT}:8501"
     environment:
