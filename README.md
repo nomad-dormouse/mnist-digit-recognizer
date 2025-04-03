@@ -31,7 +31,7 @@ project_root/
 ├── deploy.sh          # Main deployment script
 ├── init.sql           # Database initialization script
 ├── Dockerfile         # Multi-stage Dockerfile for all environments
-├── docker-compose.yml # Base Docker Compose configuration
+├── docker-compose.yml # Docker Compose configuration
 ├── .env               # Environment variables (consolidated)
 ├── model/             # Model training and inference
 │   ├── model.py       # Model definition
@@ -128,12 +128,12 @@ The project uses a consolidated approach to environment variables:
 
 ### Docker Configuration
 
-The project uses a multi-stage Dockerfile approach for better maintainability:
-- A single `Dockerfile` in the root directory contains stages for both local and remote environments
-- The `base` stage contains common dependencies and configuration
-- The `local` stage adds development-specific settings
-- The `remote` stage adds production-specific settings
-- Docker Compose override files specify which target to use for each environment
+The project uses a simple but effective Docker approach:
+- A single `Dockerfile` for the application
+- A single `docker-compose.yml` file for container orchestration
+- The `IS_DEVELOPMENT` environment variable controls application behavior:
+  - Set to `true` by default (enables hot reloading, debug options)
+  - Set to `false` for production deployment (enables optimizations)
 
 ### Database Schema
 
