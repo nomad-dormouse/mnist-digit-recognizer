@@ -16,7 +16,7 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
-      - PYTHONUNBUFFERED=1
+      - MODEL_PATH=${MODEL_PATH}
     volumes:
       - ./model/saved_models:/model/saved_models:ro
     depends_on:
@@ -42,7 +42,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
 
 # VOLUME CONFIGURATION
 volumes:

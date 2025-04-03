@@ -29,7 +29,9 @@ COPY . .
 ENV PYTHONUNBUFFERED=1 \
     STREAMLIT_SERVER_PORT=8501 \
     STREAMLIT_SERVER_HEADLESS=true \
-    DB_HOST=db
+    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false \
+    DB_HOST=db \
+    IS_DEVELOPMENT=true
 
 # Expose the port Streamlit will run on
 EXPOSE 8501
