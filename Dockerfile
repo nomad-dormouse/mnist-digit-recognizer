@@ -1,7 +1,6 @@
 # MNIST DIGIT RECOGNIZER DOCKERFILE
 #
-# This simplified Dockerfile works for both local and remote environments,
-# using environment variables to handle environment-specific settings.
+# Image for both local and remote environments
 
 FROM python:3.9-slim
 
@@ -25,14 +24,10 @@ RUN mkdir -p model/saved_models
 # Copy the application code
 COPY . .
 
-# Set common environment variables
+# Set Python to run unbuffered
 ENV PYTHONUNBUFFERED=1 \
-    STREAMLIT_SERVER_PORT=8501 \
     STREAMLIT_SERVER_HEADLESS=true \
-    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false \
-    STREAMLIT_SERVER_ENABLE_CORS=false \
-    DB_HOST=db \
-    IS_DEVELOPMENT=true
+    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
 
 # Expose the port Streamlit will run on
 EXPOSE 8501

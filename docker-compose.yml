@@ -1,5 +1,7 @@
 # MNIST DIGIT RECOGNIZER APPLICATION
-# Base Docker Compose configuration file
+# Docker Compose configuration file
+
+version: '3'
 
 services:
   # WEB APPLICATION SERVICE
@@ -21,6 +23,7 @@ services:
       - ./model/saved_models:/model/saved_models:ro
     depends_on:
       - db
+    restart: unless-stopped
 
   # DATABASE SERVICE
   db:
@@ -35,13 +38,13 @@ services:
     ports:
       - "${DB_PORT}:5432"
     volumes:
-      - mnist-digit-recogniser-db-volume:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
 # VOLUME CONFIGURATION
 volumes:
