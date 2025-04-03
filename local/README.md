@@ -19,7 +19,13 @@ The `local/` directory contains files related to running the MNIST Digit Recogni
 
 The main components include:
 - `deploy_locally.sh`: A bash script that sets up and runs the application locally
+- `view_local_db.sh`: A utility script to view and query the database
+- `view_mnist_samples.py`: A tool to generate HTML with MNIST dataset samples
+- `mnist_samples.html`: Pre-generated samples for reference
+
+The local environment:
 - Uses environment variables from the consolidated `.env` file in the project root
+- Sets `IS_DEVELOPMENT=true` for development-specific behaviors
 - Mounts the project directory for hot reloading during development
 
 For deployment to a remote server, use the `deploy.sh` script in the project root directory.
@@ -47,6 +53,10 @@ Key configurations include:
 - Port mappings
 - Paths for persisting data between runs
 
+The main environment difference is the `IS_DEVELOPMENT` flag:
+- Set to `true` in local development
+- Set to `false` in production deployment
+
 ## Usage
 
 ### Running Locally
@@ -63,6 +73,7 @@ Key configurations include:
 - **Docker not running**: Ensure Docker Desktop is running
 - **Port conflicts**: Check if port 8501 is already in use by another application
 - **Configuration issues**: Verify environment variables in `.env`
+- **Missing model**: The model file is included in the repository, but if missing, you'll need to train it
 
 ## Monitoring and Tools
 
@@ -84,6 +95,6 @@ Key configurations include:
 ## Development Tips
 
 - The application uses hot reloading, so changes to Python files will be reflected automatically
-- Database changes persist between container restarts
+- Database changes persist between container restarts thanks to Docker volumes
 - Use the view_local_db.sh script to monitor prediction accuracy and model performance
 - Test with various MNIST samples using the view_mnist_samples.py tool 
