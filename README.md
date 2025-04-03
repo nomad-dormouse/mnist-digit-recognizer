@@ -28,6 +28,7 @@ This project demonstrates an end-to-end machine learning application that:
 ```
 project_root/
 ├── app.py             # Main application code
+├── deploy.sh          # Main deployment script
 ├── init.sql           # Database initialization script
 ├── Dockerfile         # Multi-stage Dockerfile for all environments
 ├── docker-compose.yml # Base Docker Compose configuration
@@ -37,20 +38,11 @@ project_root/
 │   ├── train.py       # Model training script
 │   ├── data/          # MNIST dataset storage
 │   └── saved_models/  # Trained model weights
-├── local/             # Local development setup
-│   ├── deploy_locally.sh    # Local development script
-│   ├── view_local_db.sh     # View local database records
-│   ├── view_mnist_samples.py # View MNIST dataset samples
-│   └── mnist_samples.html   # Pre-generated HTML with MNIST samples
-└── remote/            # Remote deployment components
-    ├── deploy.sh      # Main deployment script
-    ├── docker-compose.remote.override.yml  # Remote Docker Compose overrides
-    ├── common.sh      # Common functions
-    ├── database.sh    # Database management
-    ├── services.sh    # Service management
-    └── helpers/       # Helper scripts for monitoring
-        ├── check_web_logs.sh
-        └── view_db.sh
+└── local/             # Local development setup
+    ├── deploy_locally.sh    # Local development script
+    ├── view_local_db.sh     # View local database records
+    ├── view_mnist_samples.py # View MNIST dataset samples
+    └── mnist_samples.html   # Pre-generated HTML with MNIST samples
 ```
 
 ## Local Development
@@ -99,23 +91,21 @@ To deploy the application to a production server:
 
 3. **Run the deployment script:**
    ```bash
-   ./remote/deploy.sh
+   ./deploy.sh
    ```
 
 4. **Verify deployment:**
-   - Check application logs: `./remote/helpers/check_web_logs.sh`
-   - View database status: `./remote/helpers/view_db.sh`
-   - Access the application at `http://your-server-ip:8501`
+   - Check application logs: `./deploy.sh logs`
+   - View database content: `./deploy.sh db`
+   - Check application status: `./deploy.sh status`
 
 ### Database Management
 
-The application uses PostgreSQL for storing predictions. The database is:
-- Automatically initialized during first deployment
-- Backed up regularly (configurable interval)
-- Monitored for health and connectivity
-- Protected with proper access controls
+The application stores predictions in a PostgreSQL database, which persists between container restarts.
 
-For database management commands, see the [Remote Helpers Guide](remote/helpers/README.md).
+Key features:
+- Prediction history is displayed in the web interface
+- Historical data can be exported for analysis
 
 ## Technical Details
 

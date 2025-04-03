@@ -22,6 +22,8 @@ The main components include:
 - Uses environment variables from the consolidated `.env` file in the project root
 - Mounts the project directory for hot reloading during development
 
+For deployment to a remote server, use the `deploy.sh` script in the project root directory.
+
 ## Development Process
 
 The recommended local development flow is:
@@ -79,7 +81,6 @@ Key configurations include:
   docker ps
   docker logs mnist-digit-recognizer-web
   ```
-
 ## Development Tips
 
 - The application uses hot reloading, so changes to Python files will be reflected automatically
