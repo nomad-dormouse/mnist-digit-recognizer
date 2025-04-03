@@ -4,9 +4,6 @@
 services:
   # WEB APPLICATION SERVICE
   web:
-    build:
-      context: ..
-      dockerfile: Dockerfile
     restart: unless-stopped
     environment:
       - STREAMLIT_SERVER_ENABLE_CORS=false
