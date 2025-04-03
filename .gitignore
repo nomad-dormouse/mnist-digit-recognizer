@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -58,7 +59,7 @@ desktop.ini
 
 # Project specific
 model/saved_models/**/*.pth
-**/*.pth
+!model/saved_models/mnist_model.pth
 **/data/
 *.gz
 *.ubyte
@@ -79,5 +80,4 @@ local/*
 # Jupyter Notebooks
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
-*.ipynb # Add more robust pycache ignoring
-**/__pycache__/
+*.ipynb
