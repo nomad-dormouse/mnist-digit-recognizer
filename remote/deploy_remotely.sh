@@ -90,7 +90,7 @@ case ${COMMAND} in
         TEMP_DIR=$(mktemp -d)
         
         mkdir -p "${TEMP_DIR}/model/saved_models"
-        cp -r docker-compose.yml remote/docker-compose.remote.override.yml Dockerfile requirements.txt .env init.sql "${TEMP_DIR}/"
+        cp -r docker-compose.yml Dockerfile requirements.txt .env init.sql "${TEMP_DIR}/"
         cp -r model/saved_models/mnist_model.pth "${TEMP_DIR}/model/saved_models/"
         cp -r app.py "${TEMP_DIR}/"
         
@@ -99,12 +99,14 @@ case ${COMMAND} in
 #!/bin/bash
 
 set -e
-COMPOSE_FILES="-f docker-compose.yml -f remote/docker-compose.remote.override.yml"
 
 # Load environment variables
 set -a
 source .env
 set +a
+
+# Set IS_DEVELOPMENT to false for production
+export IS_DEVELOPMENT=false
 
 # Ensure Docker is running
 if ! docker info > /dev/null 2>&1; then
@@ -113,10 +115,37 @@ if ! docker info > /dev/null 2>&1; then
 fi
 
 # Stop any existing containers
-docker-compose $COMPOSE_FILES down --remove-orphans
+docker-compose down --remove-orphans
+
+# Create a docker-compose.override.yml with production settings
+cat > docker-compose.override.yml << 'EOL'
+# PRODUCTION ENVIRONMENT SETTINGS
+services:
+  web:
+    restart: unless-stopped
+    environment:
+      - IS_DEVELOPMENT=false
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  db:
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          memory: 256M
+EOL
 
 # Start services
-docker-compose $COMPOSE_FILES up -d --build
+docker-compose up -d --build
 
 # Wait for services to start
 sleep 10
@@ -124,14 +153,14 @@ sleep 10
 # Check if containers are running
 if ! docker ps | grep -q "${WEB_CONTAINER_NAME}" || ! docker ps | grep -q "${DB_CONTAINER_NAME}"; then
   echo "Error: Containers failed to start"
-  docker-compose $COMPOSE_FILES logs
+  docker-compose logs
   exit 1
 fi
 
 # Wait for DB to be ready
 MAX_RETRIES=30
 for i in $(seq 1 $MAX_RETRIES); do
-  if docker-compose $COMPOSE_FILES exec -T db pg_isready -U "${DB_USER}" &>/dev/null; then
+  if docker-compose exec -T db pg_isready -U "${DB_USER}" &>/dev/null; then
     echo "Database is ready!"
     break
   fi
@@ -140,13 +169,13 @@ for i in $(seq 1 $MAX_RETRIES); do
   
   if [ $i -eq $MAX_RETRIES ]; then
     echo "Database did not initialize in time"
-    docker-compose $COMPOSE_FILES logs db
+    docker-compose logs db
     exit 1
   fi
 done
 
 # Create tables
-docker-compose $COMPOSE_FILES exec -T db psql -U "${DB_USER}" -d "${DB_NAME}" -c "
+docker-compose exec -T db psql -U "${DB_USER}" -d "${DB_NAME}" -c "
   CREATE TABLE IF NOT EXISTS predictions (
     id SERIAL PRIMARY KEY,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -167,9 +196,6 @@ EOF
         
         echo -e "${YELLOW}Copying files to remote server...${NC}"
         scp -i "${SSH_KEY}" -r "${TEMP_DIR}/"* "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}"
-        
-        ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p ${REMOTE_DIR}/remote"
-        scp -i "${SSH_KEY}" -r "${ROOT_DIR}/remote/docker-compose.remote.override.yml" "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/remote/"
         
         rm -rf "${TEMP_DIR}"
         
@@ -251,7 +277,7 @@ EOF
         
         ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
 cd ${REMOTE_DIR}
-docker-compose -f docker-compose.yml -f remote/docker-compose.remote.override.yml down
+docker-compose down
 echo "Services stopped"
 EOF
         ;;
