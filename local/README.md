@@ -54,8 +54,8 @@ Key configurations include:
 - Paths for persisting data between runs
 
 The main environment difference is the `IS_DEVELOPMENT` flag:
-- Set to `true` in local development
-- Set to `false` in production deployment
+- Set to `true` by default
+- Set to `false` for remote deployment
 
 ## Usage
 
