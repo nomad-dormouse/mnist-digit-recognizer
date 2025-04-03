@@ -6,7 +6,7 @@ This directory contains the PyTorch model for MNIST digit recognition and relate
 
 - **model.py**: Contains the model architecture definition
 - **train.py**: Script for training the model on the MNIST dataset
-- **data/**: Directory for storing training data
+- **data/**: Directory for storing the MNIST dataset
 - **saved_models/**: Directory for storing trained model weights
 
 ## Saved Models

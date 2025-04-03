@@ -8,7 +8,10 @@ This directory contains tools and configurations for local development of the MN
 local/
 ├── docker-compose.local.override.yml  # Docker Compose overrides for local environment
 ├── README.md                          # This file
-└── run_locally.sh                     # Script to run the app locally
+├── run_locally.sh                     # Script to run the app locally
+└── helpers/                           # Helper scripts for local development
+    ├── view_local_db.sh               # View local database records
+    └── view_mnist_samples.py          # View MNIST dataset samples
 ```
 
 ## Overview
@@ -17,8 +20,8 @@ The `local/` directory contains files related to running the MNIST Digit Recogni
 
 The main components include:
 - `run_locally.sh`: A bash script that sets up and runs the application locally
-- `docker-compose.local.override.yml`: Docker Compose configuration overrides specific to local development
-- Loads environment variables from `.env`
+- `docker-compose.local.override.yml`: Docker Compose configuration overrides specific to local development that targets the `local` stage in the multi-stage Dockerfile
+- Loads environment variables from the consolidated `.env` file in the project root
 
 ## Development Process
 
@@ -67,7 +70,7 @@ Key configurations include:
   ./local/helpers/view_local_db.sh [limit|all]
   ```
 
-- Generate HTML with MNIST samples:
+- Generate HTML with MNIST samples (uses the consolidated data in model/data):
   ```bash
   python local/helpers/view_mnist_samples.py
   ```

@@ -6,18 +6,17 @@ This directory contains deployment scripts and configuration for the MNIST Digit
 
 ```
 remote/
-├── deploy.sh      # Main deployment script
-├── common.sh      # Common functions and variables
-├── database.sh    # Database management functions
-├── services.sh    # Service management functions
-├── containers.sh  # Container management functions
-├── environment.sh # Environment setup functions
-├── Dockerfile.remote     # Production Dockerfile
+├── deploy.sh                          # Main deployment script
+├── common.sh                          # Common functions and variables
+├── database.sh                        # Database management functions
+├── services.sh                        # Service management functions
+├── containers.sh                      # Container management functions
+├── environment.sh                     # Environment setup functions
 ├── docker-compose.remote.override.yml # Docker Compose overrides for production
 ├── README.md                          # This file
-└── helpers/       # Helper scripts for monitoring and maintenance
-    ├── check_web_logs.sh # View web application logs
-    └── view_db.sh        # View database status
+└── helpers/                           # Helper scripts for monitoring and maintenance
+    ├── check_web_logs.sh              # View web application logs
+    └── view_db.sh                     # View database status
 ```
 
 ## Overview
@@ -26,8 +25,8 @@ The `remote/` directory contains files related to deploying the MNIST Digit Reco
 
 The main components include:
 - `deploy.sh`: A bash script that deploys the application to a remote server
-- `docker-compose.remote.override.yml`: Docker Compose configuration overrides specific to remote deployment
-- Loads environment variables from `.env`
+- `docker-compose.remote.override.yml`: Docker Compose configuration overrides specific to remote deployment that targets the `remote` stage in the multi-stage Dockerfile
+- Loads environment variables from the consolidated `.env` file in the project root
 
 ## Deployment Process
 

@@ -29,24 +29,29 @@ This project demonstrates an end-to-end machine learning application that:
 project_root/
 ├── app.py             # Main application code
 ├── init.sql           # Database initialization script
+├── Dockerfile         # Multi-stage Dockerfile for all environments
+├── docker-compose.yml # Base Docker Compose configuration
+├── .env               # Environment variables (consolidated)
 ├── model/             # Model training and inference
+│   ├── model.py       # Model definition
+│   ├── train.py       # Model training script
+│   ├── data/          # MNIST dataset storage
+│   └── saved_models/  # Trained model weights
 ├── local/             # Local development setup
-│   ├── Dockerfile.local  # Local development Dockerfile
+│   ├── docker-compose.local.override.yml  # Local Docker Compose overrides
 │   ├── run_locally.sh    # Local development script
 │   └── helpers/       # Helper scripts for local development
 │       ├── view_local_db.sh    # View local database records
 │       └── view_mnist_samples.py  # View MNIST dataset samples
-├── remote/            # Remote deployment components
-│   ├── deploy.sh      # Main deployment script
-│   ├── Dockerfile.remote  # Production Dockerfile
-│   ├── common.sh      # Common functions
-│   ├── database.sh    # Database management
-│   ├── services.sh    # Service management
-│   └── helpers/       # Helper scripts for monitoring
-│       ├── check_web_logs.sh
-│       └── view_db.sh
-├── docker-compose.yml # Docker Compose configuration
-└── .env              # Environment variables
+└── remote/            # Remote deployment components
+    ├── deploy.sh      # Main deployment script
+    ├── docker-compose.remote.override.yml  # Remote Docker Compose overrides
+    ├── common.sh      # Common functions
+    ├── database.sh    # Database management
+    ├── services.sh    # Service management
+    └── helpers/       # Helper scripts for monitoring
+        ├── check_web_logs.sh
+        └── view_db.sh
 ```
 
 ## Local Development
@@ -68,7 +73,9 @@ This includes:
    cd mnist-digit-recognizer
    ```
 
-2. Run the local development script:
+2. Configure your environment by editing the `.env` file if needed.
+
+3. Run the local development script:
    ```bash
    ./local/run_locally.sh
    ```
@@ -85,10 +92,10 @@ To deploy the application to a production server:
    - Create the deployment directory
 
 2. **Configure deployment:**
-   Update the deployment configuration in `remote/deploy.sh`:
-   - Set your server IP
-   - Configure SSH key path
-   - Set database credentials
+   Update the deployment configuration in `.env`:
+   - Set your server IP in `REMOTE_HOST`
+   - Configure SSH key path in `SSH_KEY`
+   - Set database credentials if needed
    - Adjust other deployment settings as needed
 
 3. **Run the deployment script:**
@@ -121,6 +128,14 @@ The digit recognition model is a Convolutional Neural Network (CNN) with:
 - Dropout regularization to prevent overfitting
 - 2 fully connected layers for classification
 - Trained to >99% accuracy on the MNIST dataset
+
+### Environment Configuration
+
+The project uses a consolidated approach to environment variables:
+- A single `.env` file in the root directory contains all configuration for both local and remote environments
+- Environment variables are loaded in both development and production
+- The application adapts its behavior based on the environment it's running in
+- Docker Compose loads variables from the same file for consistent configuration
 
 ### Docker Configuration
 
