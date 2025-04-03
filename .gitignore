@@ -79,4 +79,5 @@ local/*
 # Jupyter Notebooks
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
-*.ipynb 
+*.ipynb # Add more robust pycache ignoring
+**/__pycache__/
