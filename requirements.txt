@@ -1,14 +1,14 @@
-# Core ML libraries
-torch>=2.2.0          # Deep learning framework used for the MNIST model
-torchvision>=0.17.0   # Computer vision utilities and datasets (MNIST)
-numpy>=1.24.0         # Numerical computing for array operations and data manipulation
+# Database
+psycopg2-binary>=2.9.9  # PostgreSQL database adapter for prediction storage
 
 # Web application
 streamlit>=1.32.0               # Interactive web app framework for ML visualization
 streamlit-drawable-canvas>=0.9.3 # Drawing component for digit input on web interface
 
-# Database
-psycopg2-binary>=2.9.9  # PostgreSQL database adapter for prediction storage
+# Core ML libraries
+torch>=2.2.0          # Deep learning framework used for the MNIST model
+torchvision>=0.17.0   # Computer vision utilities and datasets (MNIST)
+numpy<2.0.0           # Numerical computing for array operations (PyTorch compatibility)
 
 # Data processing and visualization
 pandas>=2.2.0    # Data manipulation and analysis for prediction history
