@@ -1,290 +1,207 @@
 #!/bin/bash
+# BASE DEPLOYMENT SCRIPT FOR MNIST DIGIT RECOGNIZER
 
-# REMOTE DEPLOYMENT SCRIPT
-# This script deploys the MNIST Digit Recognizer application to a remote server.
-# 
-# Usage:
-#   ./deploy.sh [command]
-#
-# Commands:
-#   deploy   - Deploy application to remote server (default)
-#   logs     - View application logs
-#   db       - View database content
-#   status   - Check application status
-#   stop     - Stop all services
+set -e  # Exit on error
 
-# Get script directory and project root
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="${SCRIPT_DIR}"
-cd "${ROOT_DIR}"
-
-# Define colors for output
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Default command is "deploy"
-COMMAND=${1:-deploy}
+# Default configuration
+ENVIRONMENT="local"
+ACTION="up"
 
 # Load environment variables
-if [ -f ".env" ]; then
-    echo -e "${GREEN}Loading environment variables from .env...${NC}"
-    set -a
+if [[ -f ".env" ]]; then
     source ".env"
-    set +a
+fi
+
+# Help function
+show_help() {
+    echo -e "${YELLOW}Usage:${NC} $0 [environment] [action]"
+    echo -e "${GREEN}Environment:${NC}"
+    echo "  local     Deploy in local development environment (default)"
+    echo "  remote    Deploy in remote production environment"
+    echo -e "${GREEN}Actions:${NC}"
+    echo "  up        Start containers (default)"
+    echo "  down      Stop and remove containers"
+    echo "  restart   Restart containers"
+    echo "  logs      View logs"
+    echo "  status    Check container status"
+    echo -e "${GREEN}Examples:${NC}"
+    echo "  $0 local up      Start application locally and open browser"
+    echo "  $0 remote up     Deploy application to remote server"
+    echo "  $0 local down    Stop local containers"
+}
+
+# Parse command line arguments
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    show_help
+    exit 0
+fi
+
+# Process environment argument
+if [[ "$1" == "local" || "$1" == "remote" ]]; then
+    ENVIRONMENT="$1"
+    shift
 else
-    echo -e "${RED}Error: .env file not found.${NC}"
+    echo -e "${YELLOW}No environment specified, defaulting to 'local'${NC}"
+fi
+
+# Process action argument
+if [[ "$1" == "up" || "$1" == "down" || "$1" == "restart" || "$1" == "logs" || "$1" == "status" ]]; then
+    ACTION="$1"
+    shift
+elif [[ -n "$1" ]]; then
+    echo -e "${RED}Unknown action: $1${NC}"
+    show_help
     exit 1
 fi
 
-# Handle different commands
-case ${COMMAND} in
-    deploy)
-        # Check dependencies
-        echo -e "${BLUE}Checking dependencies...${NC}"
-        DEPS=("ssh" "scp" "git" "docker" "docker-compose")
-        MISSING_DEPS=()
+# Configure environment based on deployment type
+if [[ "$ENVIRONMENT" == "remote" ]]; then
+    # Production environment settings
+    HOST=${REMOTE_HOST}
+    echo -e "${YELLOW}Running in REMOTE (production) mode${NC}"
+else
+    # Local environment settings
+    HOST=localhost
+    echo -e "${YELLOW}Running in LOCAL (development) mode${NC}"
+fi
 
-        for dep in "${DEPS[@]}"; do
-            if ! command -v "$dep" &> /dev/null; then
-                MISSING_DEPS+=("$dep")
-            fi
-        done
-
-        if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
-            echo -e "${RED}Error: The following dependencies are missing:${NC}"
-            for dep in "${MISSING_DEPS[@]}"; do
-                echo -e "${RED}- $dep${NC}"
-            done
-            echo -e "${YELLOW}Please install them before continuing.${NC}"
-            exit 1
-        fi
-
-        # Check prerequisites
-        if ! docker ps &>/dev/null; then
-            echo -e "${RED}Error: Docker is not running. Start Docker first.${NC}"
-            exit 1
-        fi
-
-        # Check if model file exists
-        MODEL_FILE="${ROOT_DIR}/model/saved_models/mnist_model.pth"
-        if [ ! -f "${MODEL_FILE}" ]; then
-            echo -e "${RED}Error: Model file not found at ${MODEL_FILE}${NC}"
-            echo -e "${YELLOW}Please run the training script to generate the model first.${NC}"
-            exit 1
-        fi
-
-        # Check SSH key exists
-        if [ ! -f "${SSH_KEY}" ]; then
-            echo -e "${RED}Error: SSH key not found at ${SSH_KEY}${NC}"
-            exit 1
-        fi
-
-        # Begin deployment
-        echo -e "${YELLOW}MNIST DIGIT RECOGNIZER - REMOTE DEPLOYMENT${NC}"
-
-        # Create deployment package
-        echo -e "${YELLOW}Creating deployment package...${NC}"
-        TEMP_DIR=$(mktemp -d)
-        
-        mkdir -p "${TEMP_DIR}/model/saved_models"
-        cp -r docker-compose.yml Dockerfile requirements.txt .env init.sql "${TEMP_DIR}/"
-        cp -r model/saved_models/mnist_model.pth "${TEMP_DIR}/model/saved_models/"
-        cp -r app.py "${TEMP_DIR}/"
-        
-        # Create deploy script on remote
-        cat > "${TEMP_DIR}/deploy.sh" << 'EOF'
-#!/bin/bash
-
-set -e
-
-# Load environment variables
-set -a
-source .env
-set +a
-
-# Set IS_DEVELOPMENT to false for production
-export IS_DEVELOPMENT=false
-
-# Ensure Docker is running
+# Check Docker is running
 if ! docker info > /dev/null 2>&1; then
-  echo "Error: Docker is not running on the remote server"
-  exit 1
-fi
-
-# Stop any existing containers
-docker-compose down --remove-orphans
-
-# Create a docker-compose.override.yml with production settings
-cat > docker-compose.override.yml << 'EOL'
-# PRODUCTION ENVIRONMENT SETTINGS
-services:
-  web:
-    restart: unless-stopped
-    environment:
-      - IS_DEVELOPMENT=false
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          memory: 512M
-
-  db:
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-        reservations:
-          memory: 256M
-EOL
-
-# Start services
-docker-compose up -d --build
-
-# Wait for services to start
-sleep 10
-
-# Check if containers are running
-if ! docker ps | grep -q "${WEB_CONTAINER_NAME}" || ! docker ps | grep -q "${DB_CONTAINER_NAME}"; then
-  echo "Error: Containers failed to start"
-  docker-compose logs
-  exit 1
-fi
-
-# Wait for DB to be ready
-MAX_RETRIES=30
-for i in $(seq 1 $MAX_RETRIES); do
-  if docker-compose exec -T db pg_isready -U "${DB_USER}" &>/dev/null; then
-    echo "Database is ready!"
-    break
-  fi
-  echo -n "."
-  sleep 2
-  
-  if [ $i -eq $MAX_RETRIES ]; then
-    echo "Database did not initialize in time"
-    docker-compose logs db
+    echo -e "${RED}Docker is not running. Please start Docker and try again.${NC}"
     exit 1
-  fi
-done
+fi
 
-# Create tables
-docker-compose exec -T db psql -U "${DB_USER}" -d "${DB_NAME}" -c "
-  CREATE TABLE IF NOT EXISTS predictions (
-    id SERIAL PRIMARY KEY,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    predicted_digit INTEGER NOT NULL,
-    true_label INTEGER,
-    confidence FLOAT NOT NULL
-  );" > /dev/null 2>&1
+# Check if container is running
+check_container() {
+    if docker ps --format '{{.Names}}' | grep -q "^${1}$"; then
+        echo -e "${GREEN}✓ $1 is running${NC}"
+        return 0
+    else
+        echo -e "${RED}✗ $1 is not running${NC}"
+        return 1
+    fi
+}
 
-echo "Deployment completed successfully!"
-echo "The application is available at http://$(hostname -I | awk '{print $1}'):${APP_PORT}"
-EOF
+# Wait for database to be ready
+wait_for_db() {
+    echo -e "${BLUE}Waiting for database...${NC}"
+    local attempts=0
+    
+    while ! docker exec ${DB_CONTAINER_NAME} pg_isready -U postgres -h localhost > /dev/null 2>&1; do
+        attempts=$((attempts+1))
+        if [[ $attempts -ge 30 ]]; then
+            echo -e "${RED}Database did not become ready in time.${NC}"
+            return 1
+        fi
+        echo -n "."
+        sleep 1
+    done
+    echo -e "\n${GREEN}Database is ready!${NC}"
+    return 0
+}
+
+# Initialize database
+init_database() {
+    wait_for_db
+    
+    if ! docker exec ${DB_CONTAINER_NAME} psql -U postgres -d mnist_db -c "\dt predictions" 2>/dev/null | grep -q "predictions"; then
+        echo -e "${YELLOW}Creating predictions table...${NC}"
+        docker exec ${DB_CONTAINER_NAME} psql -U postgres -d mnist_db -c "
+            CREATE TABLE IF NOT EXISTS predictions (
+                id SERIAL PRIMARY KEY,
+                timestamp TIMESTAMP NOT NULL,
+                predicted_digit INTEGER NOT NULL,
+                true_label INTEGER,
+                confidence FLOAT NOT NULL
+            );"
+        echo -e "${GREEN}Database initialized.${NC}"
+    else
+        echo -e "${GREEN}Database already initialized.${NC}"
+    fi
+}
+
+# Open application in browser
+open_browser() {
+    local url="http://${HOST}:${APP_PORT}"
+    
+    # Wait a moment for the application to fully start
+    echo -e "${BLUE}Waiting for application to start...${NC}"
+    sleep 5
+    
+    echo -e "${GREEN}Opening application in browser: ${NC}$url"
+    
+    # Open browser based on platform
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        open "$url"
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        xdg-open "$url" &>/dev/null
+    elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
+        start "$url"
+    else
+        echo -e "${YELLOW}Cannot automatically open browser on this platform. Please visit: ${NC}$url"
+    fi
+}
+
+# Perform action
+case "$ACTION" in
+    up)
+        echo -e "${BLUE}Starting containers in ${ENVIRONMENT} environment...${NC}"
         
-        chmod +x "${TEMP_DIR}/deploy.sh"
+        # Start the containers with docker-compose
+        docker-compose up -d
         
-        # Prepare and deploy to remote server
-        echo -e "${YELLOW}Preparing remote server...${NC}"
-        ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p ${REMOTE_DIR}"
+        sleep 3
+        check_container ${WEB_CONTAINER_NAME}
+        check_container ${DB_CONTAINER_NAME}
         
-        echo -e "${YELLOW}Copying files to remote server...${NC}"
-        scp -i "${SSH_KEY}" -r "${TEMP_DIR}/"* "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}"
+        init_database
         
-        rm -rf "${TEMP_DIR}"
+        echo -e "${GREEN}Application is running at: http://${HOST}:${APP_PORT}${NC}"
         
-        # Execute deployment on remote server
-        echo -e "${YELLOW}Executing deployment on remote server...${NC}"
-        ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "cd ${REMOTE_DIR} && ./deploy.sh"
+        # Open browser for local environment
+        if [[ "$ENVIRONMENT" == "local" ]]; then
+            open_browser
+        fi
+        ;;
         
-        echo -e "\n${GREEN}DEPLOYMENT COMPLETED SUCCESSFULLY!${NC}"
-        echo -e "${GREEN}The web interface is available at http://${REMOTE_HOST}:${APP_PORT}${NC}"
+    down)
+        echo -e "${BLUE}Stopping containers...${NC}"
+        docker-compose down
+        echo -e "${GREEN}Containers stopped.${NC}"
+        ;;
+        
+    restart)
+        echo -e "${BLUE}Restarting containers...${NC}"
+        docker-compose restart
+        
+        sleep 3
+        check_container ${WEB_CONTAINER_NAME}
+        check_container ${DB_CONTAINER_NAME}
+        
+        echo -e "${GREEN}Containers restarted.${NC}"
+        
+        # Open browser for local environment after restart
+        if [[ "$ENVIRONMENT" == "local" ]]; then
+            open_browser
+        fi
         ;;
         
     logs)
-        LINES=${2:-50}
-        echo -e "${YELLOW}Connecting to ${REMOTE_HOST} to view logs...${NC}"
-        
-        ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
-cd ${REMOTE_DIR}
-
-WEB_CONTAINER=\$(docker ps | grep "${WEB_CONTAINER_NAME}" | awk '{print \$1}')
-
-if [ -z "\${WEB_CONTAINER}" ]; then
-  echo "Web container not found!"
-  exit 1
-fi
-
-echo "Found web container: \${WEB_CONTAINER}"
-echo "Showing last ${LINES} lines of logs..."
-docker logs \${WEB_CONTAINER} --tail ${LINES}
-EOF
-        ;;
-        
-    db)
-        LIMIT=${2:-10}
-        echo -e "${YELLOW}Connecting to ${REMOTE_HOST} to view database...${NC}"
-        
-        ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
-cd ${REMOTE_DIR}
-
-DB_CONTAINER=\$(docker ps | grep "${DB_CONTAINER_NAME}" | awk '{print \$1}')
-
-if [ -z "\${DB_CONTAINER}" ]; then
-  echo "Database container not found!"
-  exit 1
-fi
-
-echo "Found database container: \${DB_CONTAINER}"
-
-if [ "${LIMIT}" = "all" ]; then
-  echo "Showing all records:"
-  docker exec \${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -c "SELECT * FROM predictions ORDER BY timestamp DESC;"
-else
-  echo "Showing last ${LIMIT} records:"
-  docker exec \${DB_CONTAINER} psql -U ${DB_USER} -d ${DB_NAME} -c "SELECT * FROM predictions ORDER BY timestamp DESC LIMIT ${LIMIT};"
-fi
-EOF
+        docker-compose logs -f
         ;;
         
     status)
-        echo -e "${YELLOW}Checking application status on ${REMOTE_HOST}...${NC}"
+        echo -e "${BLUE}Container status:${NC}"
+        docker-compose ps
         
-        ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
-cd ${REMOTE_DIR}
-
-echo "Container status:"
-docker ps
-
-echo "Docker info:"
-docker info | grep "Running\|Containers\|Images"
-
-if command -v curl &> /dev/null; then
-  echo "Application health check:"
-  curl -s -o /dev/null -w "%{http_code}" http://localhost:${APP_PORT} || echo "Failed to connect"
-fi
-EOF
-        ;;
-        
-    stop)
-        echo -e "${YELLOW}Stopping services on ${REMOTE_HOST}...${NC}"
-        
-        ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
-cd ${REMOTE_DIR}
-docker-compose down
-echo "Services stopped"
-EOF
+        echo -e "\n${BLUE}Container health:${NC}"
+        check_container ${WEB_CONTAINER_NAME}
+        check_container ${DB_CONTAINER_NAME}
         ;;
         
     *)
-        echo -e "${RED}Error: Unknown command '${COMMAND}'${NC}"
-        echo -e "Available commands: deploy, logs, db, status, stop"
+        echo -e "${RED}Unknown action: $ACTION${NC}"
+        show_help
         exit 1
         ;;
 esac 

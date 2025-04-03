@@ -66,15 +66,12 @@ model/saved_models/**/*.pth
 logs/
 *.log
 
-# Local directory
-local/*
-!local/README.md
-!local/deploy_locally.sh
-!local/deploy_base.sh
-!local/deploy_remotely.sh
-!local/view_local_db.sh
-!local/view_mnist_samples.py
-!local/mnist_samples.html
+# Helpers directory
+helpers/*
+!helpers/README.md
+!helpers/view_local_db.sh
+!helpers/view_mnist_samples.py
+!helpers/mnist_samples.html
 
 # Docker
 .dockerignore
