@@ -11,7 +11,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "${APP_PORT}:8501"
+      - "${APP_PORT}:${APP_PORT}"
     environment:
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
@@ -36,9 +36,9 @@ services:
       - POSTGRES_INITDB_ARGS=${POSTGRES_INITDB_ARGS}
       - PGDATA=${PGDATA}
     ports:
-      - "${DB_PORT}:5432"
+      - "${DB_PORT}:${DB_PORT}"
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./init.sql:/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
