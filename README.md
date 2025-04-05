@@ -38,7 +38,7 @@ project_root/
 │   ├── model.py          # Model definition
 │   ├── train.py          # Model training script
 │   ├── data/             # MNIST dataset storage
-│   └── saved_models/     # Trained model weights
+│   └── trained_model.pth # Trained model weights
 └── helpers/              # Helper utilities and tools
     ├── view_local_db.sh       # View local database records
     ├── view_mnist_samples.py  # View MNIST dataset samples

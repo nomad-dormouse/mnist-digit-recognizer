@@ -1,19 +1,19 @@
 # Database
-psycopg2-binary>=2.9.9  # PostgreSQL database adapter for prediction storage
+psycopg2-binary>=2.9.9
 
 # Web application
-streamlit>=1.32.0               # Interactive web app framework for ML visualization
-streamlit-drawable-canvas>=0.9.3 # Drawing component for digit input on web interface
+streamlit>=1.32.0
+streamlit-drawable-canvas>=0.9.3
 
 # Core ML libraries
-torch>=2.2.0          # Deep learning framework used for the MNIST model
-torchvision>=0.17.0   # Computer vision utilities and datasets (MNIST)
-numpy<2.0.0           # Numerical computing for array operations (PyTorch compatibility)
+torch>=2.2.0
+torchvision>=0.17.0
+numpy<2.0.0
 
 # Data processing and visualization
-pandas>=2.2.0    # Data manipulation and analysis for prediction history
-plotly>=5.18.0   # Interactive data visualization for MNIST samples
+pandas>=2.2.0
+plotly>=5.18.0
 
 # Utilities
-python-dotenv>=1.0.0  # Environment variable management for configuration
-pillow>=10.2.0        # Image processing library for digit manipulation 
+python-dotenv>=1.0.0
+pillow>=10.2.0

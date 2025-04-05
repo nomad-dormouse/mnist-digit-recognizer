@@ -61,9 +61,6 @@ def main():
     model = MNISTModel().to(device)
     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9)
 
-    # Create directory for saving model
-    os.makedirs('model/saved_models', exist_ok=True)
-
     best_accuracy = 0
     for epoch in range(1, epochs + 1):
         train(model, device, train_loader, optimizer, epoch)
@@ -72,7 +69,7 @@ def main():
         # Save the best model
         if accuracy > best_accuracy:
             best_accuracy = accuracy
-            torch.save(model.state_dict(), 'model/saved_models/mnist_model.pth')
+            torch.save(model.state_dict(), 'model/trained_model.pth')
             print(f'New best model saved with accuracy: {best_accuracy:.2f}%')
 
 if __name__ == '__main__':

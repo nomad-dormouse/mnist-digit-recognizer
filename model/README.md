@@ -7,12 +7,10 @@ This directory contains the PyTorch model for MNIST digit recognition and relate
 - **model.py**: Contains the model architecture definition
 - **train.py**: Script for training the model on the MNIST dataset
 - **data/**: Directory for storing the MNIST dataset
-- **saved_models/**: Directory for storing trained model weights
+- **trained_model.pth**: The trained model file
 
-## Saved Models
+## Model File
 
-The `saved_models` directory is used to store trained models.
+After running the training script (`python model/train.py`), the best model will be saved as `trained_model.pth`.
 
-After running the training script (`python model/train.py`), the best model will be saved as `saved_models/mnist_model.pth`.
-
-Note: The actual model files (*.pth) are not tracked in Git due to their size. 
+Note: The actual model file (*.pth) is not tracked in Git due to its size. 

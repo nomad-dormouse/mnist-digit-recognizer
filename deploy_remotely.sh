@@ -69,7 +69,7 @@ case ${COMMAND} in
         fi
 
         # Check if model file exists
-        MODEL_FILE="${ROOT_DIR}/model/saved_models/mnist_model.pth"
+        MODEL_FILE="${ROOT_DIR}/model/trained_model.pth"
         if [ ! -f "${MODEL_FILE}" ]; then
             echo -e "${RED}Error: Model file not found at ${MODEL_FILE}${NC}"
             echo -e "${YELLOW}Please run the training script to generate the model first.${NC}"
@@ -89,9 +89,9 @@ case ${COMMAND} in
         echo -e "${YELLOW}Creating deployment package...${NC}"
         TEMP_DIR=$(mktemp -d)
         
-        mkdir -p "${TEMP_DIR}/model/saved_models"
+        mkdir -p "${TEMP_DIR}/model"
         cp -r docker-compose.yml Dockerfile requirements.txt .env init.sql "${TEMP_DIR}/"
-        cp -r model/saved_models/mnist_model.pth "${TEMP_DIR}/model/saved_models/"
+        cp -r model/trained_model.pth "${TEMP_DIR}/model/"
         cp -r app.py "${TEMP_DIR}/"
         
         # Create deploy script on remote

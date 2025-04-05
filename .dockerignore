@@ -1,0 +1,17 @@
+# Helper scripts and tools directory
+helpers/
+
+# Documentation
+model/README.md
+README.md
+
+# Python virtual environment
+venv/
+
+# Docker files
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Git version control file
+.gitignore
