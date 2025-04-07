@@ -14,12 +14,8 @@ README.md
 Dockerfile
 docker-compose.yml
 
-# Python virtual environment
-venv/
-
 # Development environment
 venv/
-.env.local
 __pycache__/
 *.py[cod]
 *$py.class
