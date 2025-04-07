@@ -165,7 +165,7 @@ def preprocess_image(image):
     return image
 
 def main():
-    st.title("Digit Recognizer", anchor=False)
+    st.title("Digit Recogniser", anchor=False)
     
     # Add more space after the title
     st.markdown("<br>", unsafe_allow_html=True)

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # REMOTE DEPLOYMENT SCRIPT
-# This script deploys the MNIST Digit Recognizer application to a remote server.
+# This script deploys the MNIST Digit Recogniser application to a remote server.
 # 
 # Usage:
 #   ./deploy.sh [command]

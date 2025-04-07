@@ -1,5 +1,5 @@
 #!/bin/bash
-# DATABASE VIEWER FOR MNIST DIGIT RECOGNIZER
+# DATABASE VIEWER FOR MNIST DIGIT RECOGNISER
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

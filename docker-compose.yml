@@ -1,4 +1,4 @@
-# MNIST DIGIT RECOGNIZER APPLICATION
+# MNIST DIGIT RECOGNISER APPLICATION
 # Docker Compose configuration file
 
 version: '3'

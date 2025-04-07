@@ -1,10 +1,10 @@
-# MNIST Digit Recognizer
+# MNIST Digit Recogniser
 
 A full-stack machine learning application that allows users to draw digits and get real-time predictions using a PyTorch model trained on the MNIST dataset.
 
 **Live Demo**: [http://37.27.197.79:8501](http://37.27.197.79:8501)
 
-**GitHub Repository**: [https://github.com/nomad-dormouse/mnist-digit-recognizer](https://github.com/nomad-dormouse/mnist-digit-recognizer)
+**GitHub Repository**: [https://github.com/nomad-dormouse/mnist-digit-recogniser](https://github.com/nomad-dormouse/mnist-digit-recogniser)
 
 ## Features
 
@@ -47,8 +47,8 @@ project_root/
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/nomad-dormouse/mnist-digit-recognizer.git
-   cd mnist-digit-recognizer
+   git clone https://github.com/nomad-dormouse/mnist-digit-recogniser.git
+   cd mnist-digit-recogniser
    ```
 
 2. Configure your environment by editing the `.env` file if needed.
