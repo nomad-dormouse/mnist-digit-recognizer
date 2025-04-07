@@ -38,6 +38,8 @@ services:
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_INITDB_ARGS=${POSTGRES_INITDB_ARGS}
+      - PGDATA=${PGDATA}
     ports:
       - "${DB_PORT}:${DB_PORT}"
     volumes:
