@@ -19,10 +19,10 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
-      - MODEL_PATH=${MODEL_PATH}
+      - MODEL_PATH=/app/model/trained_model.pth
       # Python and Streamlit configuration
-      - PYTHONUNBUFFERED=${PYTHONUNBUFFERED}
-      - STREAMLIT_SERVER_HEADLESS=${STREAMLIT_SERVER_HEADLESS}
+      - PYTHONUNBUFFERED=1
+      - STREAMLIT_SERVER_HEADLESS=true
     volumes:
       - ./model:/app/model:ro
       - ./model/trained_model.pth:/app/model/trained_model.pth:ro
