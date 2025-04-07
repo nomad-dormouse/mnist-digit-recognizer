@@ -25,6 +25,7 @@ services:
       - STREAMLIT_SERVER_HEADLESS=${STREAMLIT_SERVER_HEADLESS}
     volumes:
       - ./model:/app/model:ro
+      - ./model/trained_model.pth:/app/model/trained_model.pth:ro
     depends_on:
       - db
     restart: unless-stopped

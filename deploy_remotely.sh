@@ -181,8 +181,21 @@ case ${COMMAND} in
 
         # Copy required files
         cp -r docker-compose.yml Dockerfile requirements.txt .env init.sql app.py "${TEMP_DIR}/"
-        # Copy the entire model directory including Python files
-        cp -r model/*.py model/trained_model.pth "${TEMP_DIR}/model/"
+
+        # Create model directory and copy files
+        mkdir -p "${TEMP_DIR}/model"
+        cp model/*.py "${TEMP_DIR}/model/"
+        cp model/trained_model.pth "${TEMP_DIR}/model/"
+        echo "from .model import MNISTModel" > "${TEMP_DIR}/model/__init__.py"
+
+        # Verify model file was copied
+        if [ -f "${TEMP_DIR}/model/trained_model.pth" ]; then
+            echo -e "${GREEN}Model file successfully copied${NC}"
+            ls -la "${TEMP_DIR}/model/"
+        else
+            echo -e "${RED}Error: Model file not copied. Aborting deployment.${NC}"
+            exit 1
+        fi
 
         # Create remote directory and copy files
         echo -e "${BLUE}Copying files to remote server...${NC}"
@@ -202,6 +215,37 @@ case ${COMMAND} in
 
         echo -e "${GREEN}Deployment completed!${NC}"
         echo -e "${GREEN}The application should be available at: http://${REMOTE_HOST}:${APP_PORT}${NC}"
+        
+        # Wait a moment for containers to start
+        echo -e "${BLUE}Waiting for containers to initialize...${NC}"
+        sleep 5
+        
+        # Check file existence in container
+        echo -e "${BLUE}Checking model file in container...${NC}"
+        ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
+cd ${REMOTE_DIR}
+WEB_CONTAINER=\$(docker ps | grep "${WEB_CONTAINER_NAME}" | awk '{print \$1}')
+if [ ! -z "\${WEB_CONTAINER}" ]; then
+    echo "Container file check:"
+    docker exec \${WEB_CONTAINER} ls -la /app/model
+    echo "Model path environment variable:"
+    docker exec \${WEB_CONTAINER} sh -c 'echo \$MODEL_PATH'
+else
+    echo "Container not found"
+fi
+EOF
+
+        # Show application logs
+        echo -e "${BLUE}Application logs:${NC}"
+        ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
+cd ${REMOTE_DIR}
+WEB_CONTAINER=\$(docker ps | grep "${WEB_CONTAINER_NAME}" | awk '{print \$1}')
+if [ ! -z "\${WEB_CONTAINER}" ]; then
+    docker logs \${WEB_CONTAINER} --tail 100
+else
+    echo "Container not found"
+fi
+EOF
         ;;
         
     logs)

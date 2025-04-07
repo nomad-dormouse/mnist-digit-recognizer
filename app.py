@@ -135,7 +135,17 @@ def load_model():
     # Get model path directly from environment variable
     model_path = os.getenv('MODEL_PATH')
     
+    # Debug: Print information about model path
     print(f"Loading model from: {model_path}")
+    print(f"Model file exists: {os.path.exists(model_path)}")
+    print(f"Directory listing:")
+    model_dir = os.path.dirname(model_path)
+    if os.path.exists(model_dir):
+        print(f"Contents of {model_dir}: {os.listdir(model_dir)}")
+    else:
+        print(f"Directory {model_dir} does not exist")
+    
+    # Try to load model
     model_instance.load_state_dict(torch.load(model_path, map_location=device))
     model_instance.eval()
     return model_instance

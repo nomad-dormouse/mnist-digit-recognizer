@@ -158,7 +158,7 @@ open_browser() {
     echo -e "${BLUE}Waiting for application to start...${NC}"
     sleep 5
     
-    echo -e "${GREEN}Opening application in browser: ${NC}$url"
+    echo -e "${GREEN}Opening application in browser: $url"
     
     # Open browser based on platform
     if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -168,7 +168,7 @@ open_browser() {
     elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
         start "$url"
     else
-        echo -e "${YELLOW}Cannot automatically open browser on this platform. Please visit: ${NC}$url"
+        echo -e "${YELLOW}Cannot automatically open browser on this platform. Please visit: $url"
     fi
 }
 
