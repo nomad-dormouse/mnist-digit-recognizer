@@ -31,6 +31,7 @@ DB_PORT = os.getenv('DB_PORT', '5432')
 DB_NAME = os.getenv('DB_NAME', 'mnist_db')
 DB_USER = os.getenv('DB_USER', 'postgres')
 DB_PASSWORD = os.getenv('DB_PASSWORD', 'postgres')
+DB_TIMEOUT = int(os.getenv('DB_TIMEOUT', '30'))
 
 # Check if we're running in development mode
 is_development = os.getenv('IS_DEVELOPMENT', 'false').lower() == 'true'
@@ -59,7 +60,7 @@ def get_db_connection():
             dbname=DB_NAME,
             user=DB_USER,
             password=DB_PASSWORD,
-            connect_timeout=10
+            connect_timeout=DB_TIMEOUT
         )
         print("Database connection successful")
         return conn
@@ -77,7 +78,7 @@ def get_db_connection():
                     dbname=DB_NAME,
                     user=DB_USER,
                     password=DB_PASSWORD,
-                    connect_timeout=10
+                    connect_timeout=DB_TIMEOUT
                 )
                 print("Fallback connection successful")
                 return conn
@@ -131,21 +132,8 @@ def load_model():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = MNISTModel().to(device)
     
-    # Get model path from environment variable
-    model_path = os.getenv('MODEL_PATH', '/app/model/trained_model.pth')
-    
-    # Check if model exists at the specified path
-    if not os.path.exists(model_path):
-        # Fallback to local development path as a backup
-        project_root = os.path.dirname(os.path.abspath(__file__))
-        fallback_path = os.path.join(project_root, 'model', 'trained_model.pth')
-        
-        if os.path.exists(fallback_path):
-            model_path = fallback_path
-            print(f"Using fallback model path: {model_path}")
-        else:
-            st.error(f"Model file not found at: {model_path} or {fallback_path}")
-            return None
+    # Get model path directly from environment variable
+    model_path = os.getenv('MODEL_PATH')
     
     print(f"Loading model from: {model_path}")
     model.load_state_dict(torch.load(model_path, map_location=device))
@@ -194,9 +182,6 @@ def main():
     
     # Initialize the model
     model = load_model()
-    
-    if model is None:
-        st.stop()
 
     # Display prediction result and controls in the right column
     with col2:
@@ -226,13 +211,12 @@ def main():
                 if st.button("Submit"):
                     if log_prediction(prediction, true_label, confidence):
                         st.success("Prediction logged successfully!")
-                    # Error message is already shown by log_prediction if it fails
             else:
                 st.write("Draw a digit to see prediction")
         else:
             st.write("Draw a digit to see prediction")
 
-    # Display prediction history below (removed the divider line)
+    # Display prediction history
     st.markdown("### History")
     history_df = get_prediction_history()
     if not history_df.empty:

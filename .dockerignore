@@ -1,5 +1,10 @@
-# Helper scripts and tools directory
-helpers/
+# Version control
+.gitignore
+
+# Docker files
+.dockerignore
+Dockerfile
+docker-compose.yml
 
 # Documentation
 model/README.md
@@ -8,10 +13,17 @@ README.md
 # Python virtual environment
 venv/
 
-# Docker files
-.dockerignore
-Dockerfile
-docker-compose.yml
+# Development environment
+venv/
+.env.local
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
 
-# Git version control file
-.gitignore
+# OS specific files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo

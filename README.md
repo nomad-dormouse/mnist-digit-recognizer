@@ -34,15 +34,11 @@ project_root/
 ├── Dockerfile            # Multi-stage Dockerfile for all environments
 ├── docker-compose.yml    # Docker Compose configuration
 ├── .env                  # Environment variables (consolidated)
-├── model/                # Model training and inference
-│   ├── model.py          # Model definition
-│   ├── train.py          # Model training script
-│   ├── data/             # MNIST dataset storage
-│   └── trained_model.pth # Trained model weights
-└── helpers/              # Helper utilities and tools
-    ├── view_local_db.sh       # View local database records
-    ├── view_mnist_samples.py  # View MNIST dataset samples
-    └── mnist_samples.html     # Pre-generated HTML with MNIST samples
+└── model/                # Model training and inference
+    ├── model.py          # Model definition
+    ├── train.py          # Model training script
+    ├── data/             # MNIST dataset storage
+    └── trained_model.pth # Trained model weights
 ```
 
 ## Local Development
