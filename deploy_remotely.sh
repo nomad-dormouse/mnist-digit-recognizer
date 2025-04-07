@@ -181,7 +181,8 @@ case ${COMMAND} in
 
         # Copy required files
         cp -r docker-compose.yml Dockerfile requirements.txt .env init.sql app.py "${TEMP_DIR}/"
-        cp -r model/trained_model.pth "${TEMP_DIR}/model/"
+        # Copy the entire model directory including Python files
+        cp -r model/*.py model/trained_model.pth "${TEMP_DIR}/model/"
 
         # Create remote directory and copy files
         echo -e "${BLUE}Copying files to remote server...${NC}"

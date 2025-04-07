@@ -24,7 +24,7 @@ services:
       - PYTHONUNBUFFERED=${PYTHONUNBUFFERED}
       - STREAMLIT_SERVER_HEADLESS=${STREAMLIT_SERVER_HEADLESS}
     volumes:
-      - ./model/trained_model.pth:/model/trained_model.pth:ro
+      - ./model:/app/model:ro
     depends_on:
       - db
     restart: unless-stopped
