@@ -1,3 +1,6 @@
+# Temporary ignoring
+deploy_remotely_new.sh
+
 # Directory containing dataset files
 model/data/
 !model/data/MNIST/view_mnist_samples.py

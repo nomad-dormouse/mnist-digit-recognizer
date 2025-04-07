@@ -86,17 +86,47 @@ check_container() {
 wait_for_db() {
     echo -e "${BLUE}Waiting for database...${NC}"
     local attempts=0
+    local max_attempts=10
     
-    while ! docker exec ${DB_CONTAINER_NAME} pg_isready -U postgres -h localhost > /dev/null 2>&1; do
+    # First, wait for container to be running
+    while ! docker ps --format '{{.Status}}' --filter "name=${DB_CONTAINER_NAME}" | grep -q "Up"; do
         attempts=$((attempts+1))
-        if [[ $attempts -ge 30 ]]; then
-            echo -e "${RED}Database did not become ready in time.${NC}"
+        if [[ $attempts -ge $max_attempts ]]; then
+            echo -e "${RED}Database container failed to start.${NC}"
+            docker logs ${DB_CONTAINER_NAME}
             return 1
         fi
         echo -n "."
         sleep 1
     done
-    echo -e "\n${GREEN}Database is ready!${NC}"
+    
+    echo -e "\n${GREEN}Database container is running. Waiting for PostgreSQL to be ready...${NC}"
+    attempts=0
+    
+    # Then wait for PostgreSQL to be ready
+    while ! docker exec ${DB_CONTAINER_NAME} pg_isready -U ${DB_USER} -d ${DB_NAME} -h localhost; do
+        attempts=$((attempts+1))
+        if [[ $attempts -ge $max_attempts ]]; then
+            echo -e "${RED}PostgreSQL failed to become ready. Checking logs:${NC}"
+            docker logs ${DB_CONTAINER_NAME}
+            return 1
+        fi
+        sleep 1
+    done
+    
+    # Finally, check if we can actually connect and run a query
+    attempts=0
+    while ! docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c '\l' >/dev/null 2>&1; do
+        attempts=$((attempts+1))
+        if [[ $attempts -ge $max_attempts ]]; then
+            echo -e "${RED}Could not connect to PostgreSQL. Checking logs:${NC}"
+            docker logs ${DB_CONTAINER_NAME}
+            return 1
+        fi
+        sleep 1
+    done
+    
+    echo -e "${GREEN}Database is ready!${NC}"
     return 0
 }
 
@@ -104,9 +134,9 @@ wait_for_db() {
 init_database() {
     wait_for_db
     
-    if ! docker exec ${DB_CONTAINER_NAME} psql -U postgres -d mnist_db -c "\dt predictions" 2>/dev/null | grep -q "predictions"; then
+    if ! docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "\dt predictions" 2>/dev/null | grep -q "predictions"; then
         echo -e "${YELLOW}Creating predictions table...${NC}"
-        docker exec ${DB_CONTAINER_NAME} psql -U postgres -d mnist_db -c "
+        docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "
             CREATE TABLE IF NOT EXISTS predictions (
                 id SERIAL PRIMARY KEY,
                 timestamp TIMESTAMP NOT NULL,
