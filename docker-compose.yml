@@ -42,7 +42,7 @@ services:
       - "${DB_PORT}:${DB_PORT}"
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-      - postgres_data:/var/lib/postgresql/data
+      - ${DB_VOLUME_NAME}:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME} -h localhost"]
       interval: 10s
@@ -52,4 +52,5 @@ services:
 
 # VOLUME CONFIGURATION
 volumes:
-  postgres_data:
+  ${DB_VOLUME_NAME}:
+    name: ${DB_VOLUME_NAME}  # This ensures the volume has a consistent name

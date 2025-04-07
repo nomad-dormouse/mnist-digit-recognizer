@@ -170,7 +170,7 @@ case ${COMMAND} in
         # Clean up any existing deployment
         echo -e "${BLUE}Cleaning up existing deployment...${NC}"
         ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "
-            cd ${REMOTE_DIR} 2>/dev/null && docker-compose down -v || true
+            cd ${REMOTE_DIR} 2>/dev/null && docker-compose down || true
             rm -rf ${REMOTE_DIR}/*
         "
 
@@ -209,7 +209,7 @@ case ${COMMAND} in
         echo -e "${BLUE}Deploying application...${NC}"
         ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "
             cd ${REMOTE_DIR}
-            docker-compose down -v
+            docker-compose down
             docker-compose up -d
         "
 
@@ -246,6 +246,15 @@ else
     echo "Container not found"
 fi
 EOF
+
+        # After starting containers, add this:
+        echo -e "${BLUE}Checking container status...${NC}"
+        ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "
+            cd ${REMOTE_DIR}
+            docker ps -a
+            echo 'Container logs:'
+            docker logs mnist-digit-recogniser-web || echo 'Container not found or failed to start'
+        "
         ;;
         
     logs)
