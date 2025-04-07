@@ -39,11 +39,92 @@ else
     exit 1
 fi
 
+# Function to check and prepare remote server
+check_remote_server() {
+    echo -e "${BLUE}Checking remote server status...${NC}"
+    
+    # Check disk space and system updates
+    ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" '
+        echo "=== Disk Space Status ==="
+        df -h /
+        
+        # Check if disk usage is over 90%
+        DISK_USAGE=$(df / | tail -1 | awk '"'"'{print $5}'"'"' | sed '"'"'s/%//'"'"')
+        if [ "$DISK_USAGE" -gt 90 ]; then
+            echo -e "\n=== Cleaning up disk space ==="
+            # Clean Docker
+            if command -v docker &> /dev/null; then
+                echo "Cleaning Docker resources..."
+                docker system prune -af --volumes
+            fi
+            
+            # Clean package manager
+            echo "Cleaning package manager cache..."
+            apt-get clean
+            apt-get autoremove -y
+            
+            echo -e "\n=== Updated Disk Space Status ==="
+            df -h /
+        fi
+        
+        echo -e "\n=== System Update Status ==="
+        if [ -f /var/run/reboot-required ]; then
+            echo -e "${YELLOW}System restart required${NC}"
+        fi
+        
+        UPDATES=$(apt list --upgradable 2>/dev/null | wc -l)
+        if [ "$UPDATES" -gt 1 ]; then
+            echo -e "${YELLOW}System has $((UPDATES-1)) updates available${NC}"
+            echo -e "${BLUE}Would you like to update the system? [y/N]:${NC} "
+            read -p "" -n 1 -r REPLY
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                echo -e "${GREEN}Installing updates...${NC}"
+                apt-get update
+                apt-get upgrade -y
+            else
+                echo -e "${YELLOW}Skipping system updates${NC}"
+            fi
+        else
+            echo -e "${GREEN}System is up to date${NC}"
+        fi
+        
+        # Check Docker status
+        echo -e "\n=== Docker Status ==="
+        if command -v docker &> /dev/null; then
+            echo "Docker is installed"
+            if systemctl is-active --quiet docker; then
+                echo "Docker service is running"
+            else
+                echo "Starting Docker service..."
+                systemctl start docker
+                systemctl enable docker
+            fi
+        else
+            echo "Docker is not installed"
+        fi
+        
+        # Check Docker Compose
+        echo -e "\n=== Docker Compose Status ==="
+        if command -v docker-compose &> /dev/null; then
+            echo "Docker Compose is installed"
+        else
+            echo "Docker Compose is not installed"
+        fi
+    '
+    
+    # Check the exit status
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to check remote server status${NC}"
+        exit 1
+    fi
+}
+
 # Handle different commands
 case ${COMMAND} in
     deploy)
         # Check dependencies
-        echo -e "${BLUE}Checking dependencies...${NC}"
+        echo -e "${BLUE}Checking local dependencies...${NC}"
         DEPS=("ssh" "scp" "git" "docker" "docker-compose")
         MISSING_DEPS=()
 
@@ -68,143 +149,58 @@ case ${COMMAND} in
             exit 1
         fi
 
-        # Check if model file exists
-        MODEL_FILE="${ROOT_DIR}/model/trained_model.pth"
-        if [ ! -f "${MODEL_FILE}" ]; then
-            echo -e "${RED}Error: Model file not found at ${MODEL_FILE}${NC}"
-            echo -e "${YELLOW}Please run the training script to generate the model first.${NC}"
-            exit 1
-        fi
-
         # Check SSH key exists
         if [ ! -f "${SSH_KEY}" ]; then
             echo -e "${RED}Error: SSH key not found at ${SSH_KEY}${NC}"
             exit 1
         fi
 
-        # Begin deployment
-        echo -e "${YELLOW}MNIST DIGIT RECOGNIZER - REMOTE DEPLOYMENT${NC}"
+        # Check if model file exists
+        MODEL_FILE="${ROOT_DIR}/model/trained_model.pth"
+        if [ ! -f "${MODEL_FILE}" ]; then
+            echo -e "${RED}Error: Model file not found at ${MODEL_FILE}${NC}"
+            exit 1
+        fi
 
-        # Create deployment package
+        # Check remote server status
+        check_remote_server
+
+        echo -e "${BLUE}Starting deployment to ${REMOTE_HOST}...${NC}"
+
+        # Clean up any existing deployment
+        echo -e "${BLUE}Cleaning up existing deployment...${NC}"
+        ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "
+            cd ${REMOTE_DIR} 2>/dev/null && docker-compose down -v || true
+            rm -rf ${REMOTE_DIR}/*
+        "
+
+        # Create and copy deployment package
         echo -e "${YELLOW}Creating deployment package...${NC}"
         TEMP_DIR=$(mktemp -d)
-        
         mkdir -p "${TEMP_DIR}/model"
-        cp -r docker-compose.yml Dockerfile requirements.txt .env init.sql "${TEMP_DIR}/"
+
+        # Copy required files
+        cp -r docker-compose.yml Dockerfile requirements.txt .env init.sql app.py "${TEMP_DIR}/"
         cp -r model/trained_model.pth "${TEMP_DIR}/model/"
-        cp -r app.py "${TEMP_DIR}/"
-        
-        # Create deploy script on remote
-        cat > "${TEMP_DIR}/deploy.sh" << 'EOF'
-#!/bin/bash
 
-set -e
-
-# Load environment variables
-set -a
-source .env
-set +a
-
-# Set IS_DEVELOPMENT to false for production
-export IS_DEVELOPMENT=false
-
-# Ensure Docker is running
-if ! docker info > /dev/null 2>&1; then
-  echo "Error: Docker is not running on the remote server"
-  exit 1
-fi
-
-# Stop any existing containers
-docker-compose down --remove-orphans
-
-# Create a docker-compose.override.yml with production settings
-cat > docker-compose.override.yml << 'EOL'
-# PRODUCTION ENVIRONMENT SETTINGS
-services:
-  web:
-    restart: unless-stopped
-    environment:
-      - IS_DEVELOPMENT=false
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          memory: 512M
-
-  db:
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-        reservations:
-          memory: 256M
-EOL
-
-# Start services
-docker-compose up -d --build
-
-# Wait for services to start
-sleep 10
-
-# Check if containers are running
-if ! docker ps | grep -q "${WEB_CONTAINER_NAME}" || ! docker ps | grep -q "${DB_CONTAINER_NAME}"; then
-  echo "Error: Containers failed to start"
-  docker-compose logs
-  exit 1
-fi
-
-# Wait for DB to be ready
-MAX_RETRIES=30
-for i in $(seq 1 $MAX_RETRIES); do
-  if docker-compose exec -T db pg_isready -U "${DB_USER}" &>/dev/null; then
-    echo "Database is ready!"
-    break
-  fi
-  echo -n "."
-  sleep 2
-  
-  if [ $i -eq $MAX_RETRIES ]; then
-    echo "Database did not initialize in time"
-    docker-compose logs db
-    exit 1
-  fi
-done
-
-# Create tables
-docker-compose exec -T db psql -U "${DB_USER}" -d "${DB_NAME}" -c "
-  CREATE TABLE IF NOT EXISTS predictions (
-    id SERIAL PRIMARY KEY,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    predicted_digit INTEGER NOT NULL,
-    true_label INTEGER,
-    confidence FLOAT NOT NULL
-  );" > /dev/null 2>&1
-
-echo "Deployment completed successfully!"
-echo "The application is available at http://$(hostname -I | awk '{print $1}'):${APP_PORT}"
-EOF
-        
-        chmod +x "${TEMP_DIR}/deploy.sh"
-        
-        # Prepare and deploy to remote server
-        echo -e "${YELLOW}Preparing remote server...${NC}"
+        # Create remote directory and copy files
+        echo -e "${BLUE}Copying files to remote server...${NC}"
         ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p ${REMOTE_DIR}"
-        
-        echo -e "${YELLOW}Copying files to remote server...${NC}"
         scp -i "${SSH_KEY}" -r "${TEMP_DIR}/"* "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}"
-        
+
+        # Clean up temp directory
         rm -rf "${TEMP_DIR}"
-        
-        # Execute deployment on remote server
-        echo -e "${YELLOW}Executing deployment on remote server...${NC}"
-        ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "cd ${REMOTE_DIR} && ./deploy.sh"
-        
-        echo -e "\n${GREEN}DEPLOYMENT COMPLETED SUCCESSFULLY!${NC}"
-        echo -e "${GREEN}The web interface is available at http://${REMOTE_HOST}:${APP_PORT}${NC}"
+
+        # Deploy on remote server
+        echo -e "${BLUE}Deploying application...${NC}"
+        ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "
+            cd ${REMOTE_DIR}
+            docker-compose down -v
+            docker-compose up -d
+        "
+
+        echo -e "${GREEN}Deployment completed!${NC}"
+        echo -e "${GREEN}The application should be available at: http://${REMOTE_HOST}:${APP_PORT}${NC}"
         ;;
         
     logs)

@@ -13,7 +13,7 @@ from streamlit_drawable_canvas import st_canvas
 
 # Add the model directory to Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from model.model import MNISTModel
+from model import model
 
 # Load environment variables
 project_root = os.path.dirname(os.path.abspath(__file__))
@@ -130,15 +130,15 @@ def get_prediction_history():
 
 def load_model():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = MNISTModel().to(device)
+    model_instance = model.MNISTModel().to(device)
     
     # Get model path directly from environment variable
     model_path = os.getenv('MODEL_PATH')
     
     print(f"Loading model from: {model_path}")
-    model.load_state_dict(torch.load(model_path, map_location=device))
-    model.eval()
-    return model
+    model_instance.load_state_dict(torch.load(model_path, map_location=device))
+    model_instance.eval()
+    return model_instance
 
 def preprocess_image(image):
     # Convert to grayscale
