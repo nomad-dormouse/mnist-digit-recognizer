@@ -1,8 +1,6 @@
 # MNIST DIGIT RECOGNISER APPLICATION
 # Docker Compose configuration file
 
-version: '3'
-
 services:
   # WEB APPLICATION SERVICE
   web:
@@ -13,14 +11,12 @@ services:
     ports:
       - "${APP_PORT}:${APP_PORT}"
     environment:
-      # Database configuration
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - MODEL_PATH=/app/model/trained_model.pth
-      # Python and Streamlit configuration
       - PYTHONUNBUFFERED=1
       - STREAMLIT_SERVER_HEADLESS=true
     volumes:
@@ -29,6 +25,8 @@ services:
     depends_on:
       - db
     restart: unless-stopped
+    networks:
+      - app-network
 
   # DATABASE SERVICE
   db:
@@ -51,8 +49,15 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - app-network
 
 # VOLUME CONFIGURATION
 volumes:
   mnist-digit-recogniser-db-volume:
-    name: ${DB_VOLUME_NAME}  # Use the variable here only
+    name: ${DB_VOLUME_NAME}
+
+# NETWORK CONFIGURATION
+networks:
+  app-network:
+    name: ${NETWORK_NAME}

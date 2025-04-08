@@ -4,7 +4,7 @@
 # This script deploys the MNIST Digit Recogniser application to a remote server.
 # 
 # Usage:
-#   ./deploy.sh [command]
+#   ./deploy_remotely.sh [command]
 #
 # Commands:
 #   deploy   - Deploy application to remote server (default)
@@ -28,14 +28,27 @@ NC='\033[0m' # No Color
 # Default command is "deploy"
 COMMAND=${1:-deploy}
 
-# Load environment variables
+# Load environment variables locally (for SSH connection details)
 if [ -f ".env" ]; then
-    echo -e "${GREEN}Loading environment variables from .env...${NC}"
+    echo -e "${GREEN}Loading local environment variables from .env...${NC}"
     set -a
     source ".env"
     set +a
 else
-    echo -e "${RED}Error: .env file not found.${NC}"
+    echo -e "${RED}Error: .env file not found locally.${NC}"
+    exit 1
+fi
+
+# Verify SSH connection to remote server
+echo -e "${BLUE}Verifying SSH connection to ${REMOTE_USER}@${REMOTE_HOST}...${NC}"
+if ssh -i "${SSH_KEY}" -o ConnectTimeout=10 -o BatchMode=yes -o StrictHostKeyChecking=accept-new "${REMOTE_USER}@${REMOTE_HOST}" "echo 'SSH connection successful'" &> /dev/null; then
+    echo -e "${GREEN}SSH connection established successfully.${NC}"
+else
+    echo -e "${RED}Error: Could not establish SSH connection to ${REMOTE_USER}@${REMOTE_HOST}${NC}"
+    echo -e "${YELLOW}Please verify:${NC}"
+    echo -e "  - SSH key at ${SSH_KEY} is correct and has proper permissions (chmod 600)"
+    echo -e "  - Remote host ${REMOTE_HOST} is reachable"
+    echo -e "  - User ${REMOTE_USER} has access to the remote host"
     exit 1
 fi
 
@@ -177,16 +190,15 @@ case ${COMMAND} in
         # Create and copy deployment package
         echo -e "${YELLOW}Creating deployment package...${NC}"
         TEMP_DIR=$(mktemp -d)
-        mkdir -p "${TEMP_DIR}/model"
 
         # Copy required files
-        cp -r docker-compose.yml Dockerfile requirements.txt .env init.sql app.py "${TEMP_DIR}/"
+        cp -r requirements.txt .env init.sql app.py "${TEMP_DIR}/"
+        cp docker-compose.yml Dockerfile "${TEMP_DIR}/"
 
-        # Create model directory and copy files
+        # Create model directory and copy only the essential files
         mkdir -p "${TEMP_DIR}/model"
-        cp model/*.py "${TEMP_DIR}/model/"
-        cp model/trained_model.pth "${TEMP_DIR}/model/"
-        echo "from .model import MNISTModel" > "${TEMP_DIR}/model/__init__.py"
+        cp model/model.py "${TEMP_DIR}/model/"  # Only the model definition file
+        cp model/trained_model.pth "${TEMP_DIR}/model/"  # The trained model file
 
         # Verify model file was copied
         if [ -f "${TEMP_DIR}/model/trained_model.pth" ]; then
@@ -205,10 +217,31 @@ case ${COMMAND} in
         # Clean up temp directory
         rm -rf "${TEMP_DIR}"
 
+        # Verify .env file on remote server
+        echo -e "${BLUE}Verifying .env file on remote server...${NC}"
+        ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "
+            cd ${REMOTE_DIR}
+            if [ -f '.env' ]; then
+                echo 'Environment file exists and has the following permissions:'
+                ls -la .env
+                echo 'First 10 lines of .env file:'
+                head -n 10 .env
+                echo 'Environment variables that will be used by Docker Compose:'
+                grep -v '^#' .env | grep '=' | grep -v '^$' | sort
+            else
+                echo '${RED}Error: .env file not found on remote server!${NC}'
+                exit 1
+            fi
+        "
+
         # Deploy on remote server
         echo -e "${BLUE}Deploying application...${NC}"
         ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "
             cd ${REMOTE_DIR}
+            # Source .env file before running docker-compose to ensure variables are available
+            set -a
+            source .env
+            set +a
             docker-compose down
             docker-compose up -d
         "
@@ -254,6 +287,19 @@ EOF
             docker ps -a
             echo 'Container logs:'
             docker logs mnist-digit-recogniser-web || echo 'Container not found or failed to start'
+        "
+
+        # After starting containers, add this check for environment variables
+        echo -e "${BLUE}Verifying environment variables in container...${NC}"
+        ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" "
+            cd ${REMOTE_DIR}
+            WEB_CONTAINER=\$(docker ps | grep mnist-digit-recogniser-web | awk '{print \$1}')
+            if [ ! -z \"\${WEB_CONTAINER}\" ]; then
+                echo 'Environment variables in container:'
+                docker exec \${WEB_CONTAINER} env | sort
+            else
+                echo 'Container not found, cannot check environment variables'
+            fi
         "
         ;;
         

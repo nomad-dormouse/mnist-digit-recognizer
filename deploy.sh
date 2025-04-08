@@ -1,90 +1,65 @@
 #!/bin/bash
 # DEPLOYMENT SCRIPT FOR MNIST DIGIT RECOGNISER
 
-set -e  # Exit on error
-
-# Default configuration
-ENVIRONMENT="local"
-ACTION="up"
-
-# Load environment variables
-if [[ -f ".env" ]]; then
-    source ".env"
-fi
-
-# Help function
-show_help() {
-    echo -e "${YELLOW}Usage:${NC} $0 [environment] [action]"
-    echo -e "${GREEN}Environment:${NC}"
-    echo "  local     Deploy in local development environment (default)"
-    echo "  remote    Deploy in remote production environment"
-    echo -e "${GREEN}Actions:${NC}"
-    echo "  up        Start containers (default)"
-    echo "  down      Stop and remove containers"
-    echo "  restart   Restart containers"
-    echo "  logs      View logs"
-    echo "  status    Check container status"
-    echo -e "${GREEN}Examples:${NC}"
-    echo "  $0 local up      Start application locally and open browser"
-    echo "  $0 remote up     Deploy application to remote server"
-    echo "  $0 local down    Stop local containers"
+# Check if Docker is running
+check_docker_running() {
+    if docker info > /dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
 }
 
-# Parse command line arguments
-if [[ "$1" == "-h" || "$1" == "--help" ]]; then
-    show_help
-    exit 0
-fi
+# Try to start Docker
+start_docker() {
+    echo -e "${BLUE}Docker is not running. Attempting to start Docker...${NC}"
+    
+    # Different commands based on OS
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS
+        echo -e "${BLUE}Detected macOS. Starting Docker Desktop...${NC}"
+        open -a Docker
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        # Linux
+        echo -e "${BLUE}Detected Linux. Attempting to start Docker service with systemd...${NC}"
+        sudo systemctl start docker
+    else
+        # Windows or other OS
+        echo -e "${RED}Unsupported OS for auto-starting Docker. Please start Docker manually and try again.${NC}"
+        return 1
+    fi
 
-# Process environment argument
-if [[ "$1" == "local" || "$1" == "remote" ]]; then
-    ENVIRONMENT="$1"
-    shift
-else
-    echo -e "${YELLOW}No environment specified, defaulting to 'local'${NC}"
-fi
+    # Wait for Docker to start up to 60 seconds
+    local attempts=0
+    local max_attempts=60
 
-# Process action argument
-if [[ "$1" == "up" || "$1" == "down" || "$1" == "restart" || "$1" == "logs" || "$1" == "status" ]]; then
-    ACTION="$1"
-    shift
-elif [[ -n "$1" ]]; then
-    echo -e "${RED}Unknown action: $1${NC}"
-    show_help
-    exit 1
-fi
-
-# Configure environment based on deployment type
-if [[ "$ENVIRONMENT" == "remote" ]]; then
-    # Production environment settings
-    HOST=${REMOTE_HOST}
-    echo -e "${YELLOW}Running in REMOTE (production) mode${NC}"
-else
-    # Local environment settings
-    HOST=localhost
-    echo -e "${YELLOW}Running in LOCAL (development) mode${NC}"
-fi
-
-# Check Docker is running
-if ! docker info > /dev/null 2>&1; then
-    echo -e "${RED}Docker is not running. Please start Docker and try again.${NC}"
-    exit 1
-fi
+    while ! check_docker_running; do
+        attempts=$((attempts+1))
+        if [[ $attempts -ge $max_attempts ]]; then
+            echo -e "${RED}Failed to start Docker after $max_attempts seconds. Please check Docker installation and try again.${NC}"
+            return 1
+        fi
+        echo -n "."
+        sleep 1
+    done
+    echo -e "\n${GREEN}Docker started successfully${NC}"
+    return 0
+}
 
 # Check if container is running
 check_container() {
     if docker ps --format '{{.Names}}' | grep -q "^${1}$"; then
-        echo -e "${GREEN}✓ $1 is running${NC}"
+        echo -e "${GREEN}$1 is running${NC}"
         return 0
     else
-        echo -e "${RED}✗ $1 is not running${NC}"
+        echo -e "${RED}$1 is not running${NC}"
         return 1
     fi
 }
 
 # Wait for database to be ready
 wait_for_db() {
-    echo -e "${BLUE}Waiting for database...${NC}"
+    echo -e "\n${BLUE}Waiting for database...${NC}"
     local attempts=0
     local max_attempts=10
     
@@ -100,7 +75,7 @@ wait_for_db() {
         sleep 1
     done
     
-    echo -e "\n${GREEN}Database container is running. Waiting for PostgreSQL to be ready...${NC}"
+    echo -e "${NC}Database container is running. Waiting for PostgreSQL to be ready...${NC}"
     attempts=0
     
     # Then wait for PostgreSQL to be ready
@@ -126,112 +101,74 @@ wait_for_db() {
         sleep 1
     done
     
-    echo -e "${GREEN}Database is ready!${NC}"
+    echo -e "${GREEN}Database is ready${NC}"
     return 0
 }
 
 # Initialize database
 init_database() {
     wait_for_db
-    
-    if ! docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "\dt predictions" 2>/dev/null | grep -q "predictions"; then
-        echo -e "${YELLOW}Creating predictions table...${NC}"
-        docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "
-            CREATE TABLE IF NOT EXISTS predictions (
-                id SERIAL PRIMARY KEY,
-                timestamp TIMESTAMP NOT NULL,
-                predicted_digit INTEGER NOT NULL,
-                true_label INTEGER,
-                confidence FLOAT NOT NULL
-            );"
-        echo -e "${GREEN}Database initialized.${NC}"
+
+    echo -e "${BLUE}Ensuring predictions table exists...${NC}"
+    if docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "
+        CREATE TABLE IF NOT EXISTS predictions (
+            id SERIAL PRIMARY KEY,
+            timestamp TIMESTAMP NOT NULL,
+            predicted_digit INTEGER NOT NULL,
+            true_label INTEGER,
+            confidence FLOAT NOT NULL
+        );" 2>/dev/null; then
+        echo -e "${GREEN}Database successfully initialized or already exists${NC}"
     else
-        echo -e "${GREEN}Database already initialized.${NC}"
+        echo -e "${RED}Error initializing database. Checking logs:${NC}"
+        docker logs ${DB_CONTAINER_NAME}
     fi
 }
 
-# Open application in browser
-open_browser() {
-    local url="http://${HOST}:${APP_PORT}"
-    
-    # Wait a moment for the application to fully start
-    echo -e "${BLUE}Waiting for application to start...${NC}"
-    sleep 5
-    
-    echo -e "${GREEN}Opening application in browser: $url"
-    
-    # Open browser based on platform
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        open "$url"
-    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        xdg-open "$url" &>/dev/null
-    elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
-        start "$url"
-    else
-        echo -e "${YELLOW}Cannot automatically open browser on this platform. Please visit: $url"
-    fi
-}
+# Main execution
 
-# Perform action
-case "$ACTION" in
-    up)
-        echo -e "${BLUE}Starting containers in ${ENVIRONMENT} environment...${NC}"
-        
-        # Start the containers with docker-compose
-        docker-compose up -d
-        
-        sleep 3
-        check_container ${WEB_CONTAINER_NAME}
-        check_container ${DB_CONTAINER_NAME}
-        
-        init_database
-        
-        echo -e "${GREEN}Application is running at: http://${HOST}:${APP_PORT}${NC}"
-        
-        # Open browser for local environment
-        if [[ "$ENVIRONMENT" == "local" ]]; then
-            open_browser
-        fi
-        ;;
-        
-    down)
-        echo -e "${BLUE}Stopping containers...${NC}"
-        docker-compose down
-        echo -e "${GREEN}Containers stopped.${NC}"
-        ;;
-        
-    restart)
-        echo -e "${BLUE}Restarting containers...${NC}"
-        docker-compose restart
-        
-        sleep 3
-        check_container ${WEB_CONTAINER_NAME}
-        check_container ${DB_CONTAINER_NAME}
-        
-        echo -e "${GREEN}Containers restarted.${NC}"
-        
-        # Open browser for local environment after restart
-        if [[ "$ENVIRONMENT" == "local" ]]; then
-            open_browser
-        fi
-        ;;
-        
-    logs)
-        docker-compose logs -f
-        ;;
-        
-    status)
-        echo -e "${BLUE}Container status:${NC}"
-        docker-compose ps
-        
-        echo -e "\n${BLUE}Container health:${NC}"
-        check_container ${WEB_CONTAINER_NAME}
-        check_container ${DB_CONTAINER_NAME}
-        ;;
-        
-    *)
-        echo -e "${RED}Unknown action: $ACTION${NC}"
-        show_help
+# Change to script directory which is project root
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
+# Load environment variables
+if [[ -f ".env" ]]; then
+    echo -e "${BLUE}Loading environment variables from .env...${NC}"
+    source ".env"
+else
+    echo -e "${RED}Error: .env file not found$, so required environment variables cannot be loaded${NC}"
+    echo -e "${RED}Terminating script${NC}"
+    exit 1
+fi
+
+# Ensure Docker is running
+echo -e "\n${BLUE}Ensuring Docker is running...${NC}"
+if ! check_docker_running; then
+    if ! start_docker; then
+        echo -e "${RED}Terminating script${NC}"
         exit 1
-        ;;
-esac 
+    fi
+fi
+
+echo -e "\n${BLUE}Rebuilding and starting containers...${NC}"
+
+# Stop only the specific containers we'll be rebuilding
+echo -e "\n${BLUE}Stopping application containers if running...${NC}"
+docker stop ${WEB_CONTAINER_NAME} ${DB_CONTAINER_NAME} 2>/dev/null || true
+docker rm ${WEB_CONTAINER_NAME} ${DB_CONTAINER_NAME} 2>/dev/null || true
+
+# Force rebuild of images without using cache
+echo -e "\n${BLUE}Building container images...${NC}"
+docker-compose build --no-cache
+
+# Start containers with the fresh builds
+echo -e "\n${BLUE}Starting containers...${NC}"
+docker-compose up -d
+
+sleep 3
+check_container ${WEB_CONTAINER_NAME}
+check_container ${DB_CONTAINER_NAME}
+
+init_database
+
+echo -e "\n${GREEN}Containers built and started with preserved data${NC}"
+echo -e "\n${YELLOW}To view the application, visit: http://${HOST}:${APP_PORT}${NC}\n" 
