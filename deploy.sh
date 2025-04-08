@@ -18,10 +18,12 @@ start_docker() {
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS
         echo -e "${BLUE}Detected macOS. Starting Docker Desktop...${NC}"
+        HOST="localhost"
         open -a Docker
     elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
         # Linux
         echo -e "${BLUE}Detected Linux. Attempting to start Docker service with systemd...${NC}"
+        HOST=${REMOTE_HOST}
         sudo systemctl start docker
     else
         # Windows or other OS
@@ -42,7 +44,7 @@ start_docker() {
         echo -n "."
         sleep 1
     done
-    echo -e "\n${GREEN}Docker started successfully${NC}"
+    echo -e "${GREEN}Docker started successfully${NC}"
     return 0
 }
 
@@ -59,70 +61,39 @@ check_container() {
 
 # Wait for database to be ready
 wait_for_db() {
-    echo -e "\n${BLUE}Waiting for database...${NC}"
+    echo -e "${BLUE}Waiting for database...${NC}"
     local attempts=0
     local max_attempts=10
-    
-    # First, wait for container to be running
-    while ! docker ps --format '{{.Status}}' --filter "name=${DB_CONTAINER_NAME}" | grep -q "Up"; do
+
+    # Check if the database container is running and PostgreSQL is ready
+    while ! docker ps --format '{{.Status}}' --filter "name=${DB_CONTAINER_NAME}" | grep -q "Up" || \
+          ! docker exec ${DB_CONTAINER_NAME} pg_isready -U ${DB_USER} -d ${DB_NAME} -h localhost || \
+          ! docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c '\l' >/dev/null 2>&1; do
         attempts=$((attempts+1))
         if [[ $attempts -ge $max_attempts ]]; then
-            echo -e "${RED}Database container failed to start.${NC}"
+            echo -e "${RED}Database is not ready. Checking logs:${NC}"
             docker logs ${DB_CONTAINER_NAME}
             return 1
         fi
         echo -n "."
         sleep 1
     done
-    
-    echo -e "${NC}Database container is running. Waiting for PostgreSQL to be ready...${NC}"
-    attempts=0
-    
-    # Then wait for PostgreSQL to be ready
-    while ! docker exec ${DB_CONTAINER_NAME} pg_isready -U ${DB_USER} -d ${DB_NAME} -h localhost; do
-        attempts=$((attempts+1))
-        if [[ $attempts -ge $max_attempts ]]; then
-            echo -e "${RED}PostgreSQL failed to become ready. Checking logs:${NC}"
-            docker logs ${DB_CONTAINER_NAME}
-            return 1
-        fi
-        sleep 1
-    done
-    
-    # Finally, check if we can actually connect and run a query
-    attempts=0
-    while ! docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c '\l' >/dev/null 2>&1; do
-        attempts=$((attempts+1))
-        if [[ $attempts -ge $max_attempts ]]; then
-            echo -e "${RED}Could not connect to PostgreSQL. Checking logs:${NC}"
-            docker logs ${DB_CONTAINER_NAME}
-            return 1
-        fi
-        sleep 1
-    done
-    
+
     echo -e "${GREEN}Database is ready${NC}"
     return 0
 }
 
 # Initialize database
 init_database() {
-    wait_for_db
-
-    echo -e "${BLUE}Ensuring predictions table exists...${NC}"
-    if docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "
+    echo -e "${BLUE}Initializing database...${NC}"
+    docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "
         CREATE TABLE IF NOT EXISTS predictions (
             id SERIAL PRIMARY KEY,
             timestamp TIMESTAMP NOT NULL,
             predicted_digit INTEGER NOT NULL,
             true_label INTEGER,
             confidence FLOAT NOT NULL
-        );" 2>/dev/null; then
-        echo -e "${GREEN}Database successfully initialized or already exists${NC}"
-    else
-        echo -e "${RED}Error initializing database. Checking logs:${NC}"
-        docker logs ${DB_CONTAINER_NAME}
-    fi
+        );" 2>/dev/null && echo -e "${GREEN}Database initialized successfully${NC}" || echo -e "${RED}Error initializing database${NC}"
 }
 
 # Main execution
@@ -135,8 +106,7 @@ if [[ -f ".env" ]]; then
     echo -e "${BLUE}Loading environment variables from .env...${NC}"
     source ".env"
 else
-    echo -e "${RED}Error: .env file not found$, so required environment variables cannot be loaded${NC}"
-    echo -e "${RED}Terminating script${NC}"
+    echo -e "${RED}Error: .env file not found$, so required environment variables cannot be loaded. Terminating script${NC}"
     exit 1
 fi
 
@@ -144,31 +114,39 @@ fi
 echo -e "\n${BLUE}Ensuring Docker is running...${NC}"
 if ! check_docker_running; then
     if ! start_docker; then
-        echo -e "${RED}Terminating script${NC}"
+        echo -e "${RED}Error: Docker could not be started. Terminating script.${NC}"
         exit 1
     fi
 fi
 
+# Stopping, building and starting containers
 echo -e "\n${BLUE}Rebuilding and starting containers...${NC}"
-
-# Stop only the specific containers we'll be rebuilding
-echo -e "\n${BLUE}Stopping application containers if running...${NC}"
+echo -e "${BLUE}Stopping containers if running...${NC}"
 docker stop ${WEB_CONTAINER_NAME} ${DB_CONTAINER_NAME} 2>/dev/null || true
+echo -e "${BLUE}Removing containers...${NC}"
 docker rm ${WEB_CONTAINER_NAME} ${DB_CONTAINER_NAME} 2>/dev/null || true
-
-# Force rebuild of images without using cache
-echo -e "\n${BLUE}Building container images...${NC}"
+echo -e "${BLUE}Building containers images...${NC}"
 docker-compose build --no-cache
-
-# Start containers with the fresh builds
-echo -e "\n${BLUE}Starting containers...${NC}"
+echo -e "${BLUE}Starting containers...${NC}"
 docker-compose up -d
-
 sleep 3
 check_container ${WEB_CONTAINER_NAME}
 check_container ${DB_CONTAINER_NAME}
 
-init_database
+# Ensure database is initialised
+echo -e "\n${BLUE}Ensuring database with predictions table exists...${NC}"
+wait_for_db
+if ! docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "\dt predictions" 2>/dev/null | grep -q "predictions"; then
+    echo -e "${NC}Predictions table not found${NC}"
+    init_database
+else
+    echo -e "${GREEN}Predictions table already exists${NC}"
+fi
 
-echo -e "\n${GREEN}Containers built and started with preserved data${NC}"
-echo -e "\n${YELLOW}To view the application, visit: http://${HOST}:${APP_PORT}${NC}\n" 
+# Defining host
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    HOST="localhost"
+else
+    HOST=${REMOTE_HOST}
+fi
+echo -e "\n${YELLOW}To view the application, visit: http://$HOST:${APP_PORT}${NC}\n"
