@@ -12,13 +12,13 @@ fi
 
 # Connect to the remote server and execute the deployment script
 echo -e "${BLUE}Connecting to remote server ${REMOTE_USER}@${REMOTE_HOST}...${NC}"
-ssh -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
-    echo -e "${GREEN}Connected to remote server.${NC}"
+ssh -t -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
+    echo -e "${GREEN}Connected to remote server${NC}"
     
-    echo -e "${BLUE}Navigating to remote directory...${NC}"
+    echo -e "${BLUE}Navigating to remote directory ${REMOTE_DIR}...${NC}"
     cd ${REMOTE_DIR} || exit
     
-    echo -e "${BLUE}Pulling latest changes from repository...${NC}"
+    echo -e "${BLUE}Pulling latest changes from repository ${REPO_URL}...${NC}"
     git pull ${REPO_URL}
     
     echo -e "${BLUE}Running deployment script...${NC}"

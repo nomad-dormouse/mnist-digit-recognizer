@@ -2,7 +2,9 @@
 deploy_remotely_new.sh
 
 # Directory containing dataset files
-model/data/
+model/data/*
+!model/data/MNIST/
+model/data/MNIST/*
 !model/data/MNIST/view_mnist_samples.py
 !model/trained_model.pth
 
