@@ -114,13 +114,21 @@ initialise_database() {
         );" 2>/dev/null && echo -e "${GREEN}Database initialised successfully${NC}" || echo -e "${RED}Database initialisation failed${NC}"
 }
 
-# Ensure Docker is running
+# Prepare Docker and disk space
 echo -e "\n${BLUE}Ensuring Docker is running...${NC}"
 if ! check_docker_running; then
     if ! start_docker; then
         echo -e "${RED}Docker failed to start${NC}"
         exit 1
     fi
+fi
+
+echo -e "\n${BLUE}Ensuring disk space is sufficient...${NC}"
+DISK_SPACE=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+echo -e "${NC}${DISK_SPACE}% is used${NC}"
+if [ "${DISK_SPACE}" -gt 85 ]; then
+    echo -e "${BLUE}Cleaning up disk space...${NC}"
+    docker system prune -f
 fi
 
 # Stopping, building and starting containers

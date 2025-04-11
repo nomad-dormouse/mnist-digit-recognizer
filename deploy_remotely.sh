@@ -26,10 +26,10 @@ ssh -t -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
 
     echo -e "${GREEN}Connected to remote server ${REMOTE_USER}@${REMOTE_HOST}${NC}"
 
-    DISK_SPACE=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
-    echo -e "${BLUE}Disk space: ${DISK_SPACE}%${NC}"
-    if [ "$DISK_SPACE" -gt 85 ]; then
-        echo -e "${BLUE}Disk is ${DISK_SPACE}% full, cleaning up...${NC}"
+    DISK_SPACE=\$(df -h / | awk 'NR==2 {print \$5}' | sed 's/%//')
+    echo -e "${BLUE}Disk space: \${DISK_SPACE}%${NC}"
+    if [ "\${DISK_SPACE}" -gt 85 ]; then
+        echo -e "${BLUE}Disk is \${DISK_SPACE}% full, cleaning up...${NC}"
         docker system prune -f
     fi
     
