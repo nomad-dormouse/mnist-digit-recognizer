@@ -25,13 +25,6 @@ ssh -t -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
     trap 'echo -e "${RED}Command failed at line $LINENO${NC}"; exit 1' ERR
 
     echo -e "${GREEN}Connected to remote server ${REMOTE_USER}@${REMOTE_HOST}${NC}"
-
-    DISK_SPACE=\$(df -h / | awk 'NR==2 {print \$5}' | sed 's/%//')
-    echo -e "${BLUE}Disk space: \${DISK_SPACE}%${NC}"
-    if [ "\${DISK_SPACE}" -gt 85 ]; then
-        echo -e "${BLUE}Disk is \${DISK_SPACE}% full, cleaning up...${NC}"
-        docker system prune -f
-    fi
     
     if [ -d "${REMOTE_DIR}" ]; then
         echo -e "\n${BLUE}Directory ${REMOTE_DIR} exists, removing it...${NC}"
@@ -43,7 +36,7 @@ ssh -t -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
 
     echo -e "\n${BLUE}Navigating to ${REMOTE_DIR} directory...${NC}"
     cd ${REMOTE_DIR} || { echo -e "${RED}Failed to navigate to directory${NC}"; exit 1; }
-    ./${LOCAL_DEPLOYMENT_SCRIPT} || { echo -e "${RED}Failed to run local deployment script ${LOCAL_DEPLOYMENT_SCRIPT} successfully${NC}"; exit 1; }
+    ./${LOCAL_DEPLOYMENT_SCRIPT} remote || { echo -e "${RED}Failed to run local deployment script ${LOCAL_DEPLOYMENT_SCRIPT} successfully${NC}"; exit 1; }
     
 EOF
 

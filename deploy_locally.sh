@@ -1,6 +1,9 @@
 #!/bin/bash
 # DEPLOYMENT SCRIPT FOR MNIST DIGIT RECOGNISER
 
+# Check for command line parameter
+DEPLOYMENT_MODE="${1:-local}"
+
 # Set error handling
 set -e
 trap 'echo -e "${RED}Local deployment script ${LOCAL_DEPLOYMENT_SCRIPT} terminated${NC}"; exit 1' ERR
@@ -17,7 +20,7 @@ else
 fi
 
 # Now we can use variables from .env
-echo -e "${BLUE}Running local deployment script ${LOCAL_DEPLOYMENT_SCRIPT}...${NC}"
+echo -e "${BLUE}Running local deployment script ${LOCAL_DEPLOYMENT_SCRIPT} in ${DEPLOYMENT_MODE} mode...${NC}"
 
 # Check if Docker is running
 check_docker_running() {
@@ -157,10 +160,10 @@ else
     echo -e "${GREEN}Predictions table already exists${NC}"
 fi
 
-# Defining host
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    HOST="localhost"
+# Define host based on deployment mode parameter
+if [[ "$DEPLOYMENT_MODE" == "remote" ]]; then
+    HOST="${REMOTE_HOST}"
 else
-    HOST=${REMOTE_HOST}
+    HOST="localhost"
 fi
-echo -e "\n${YELLOW}To view the application, visit: http://$HOST:${APP_PORT}${NC}\n"
+echo -e "\n${YELLOW}To view the application, visit: http://${HOST}:${APP_PORT}${NC}\n"
