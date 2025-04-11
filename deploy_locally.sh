@@ -1,11 +1,23 @@
 #!/bin/bash
 # DEPLOYMENT SCRIPT FOR MNIST DIGIT RECOGNISER
 
-echo -e "${BLUE}Running local deployment script ${LOCAL_DEPLOYMENT_SCRIPT}...${NC}"
-
 # Set error handling
 set -e
-trap 'echo -e "${RED}Script ${LOCAL_DEPLOYMENT_SCRIPT} terminated${NC}"; exit 1' ERR
+trap 'echo -e "${RED}Local deployment script ${LOCAL_DEPLOYMENT_SCRIPT} terminated${NC}"; exit 1' ERR
+
+# Change to script directory which is project root
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
+# First, load environment variables
+if [[ -f ".env" ]]; then
+    source ".env"
+else
+    echo -e "ERROR: .env file not found"
+    exit 1
+fi
+
+# Now we can use variables from .env
+echo -e "\n${BLUE}Running local deployment script ${LOCAL_DEPLOYMENT_SCRIPT}...${NC}"
 
 # Check if Docker is running
 check_docker_running() {
@@ -102,20 +114,6 @@ initialise_database() {
         );" 2>/dev/null && echo -e "${GREEN}Database initialised successfully${NC}" || echo -e "${RED}Database initialisation failed${NC}"
 }
 
-# Main execution
-
-# Change to script directory which is project root
-cd "$(dirname "${BASH_SOURCE[0]}")"
-
-# Load environment variables
-if [[ -f ".env" ]]; then
-    echo -e "\n${BLUE}Loading environment variables from .env...${NC}"
-    source ".env"
-else
-    echo -e "${RED}.env file not found. Required environment variables cannot be loaded${NC}"
-    exit 1
-fi
-
 # Ensure Docker is running
 echo -e "\n${BLUE}Ensuring Docker is running...${NC}"
 if ! check_docker_running; then
@@ -146,7 +144,7 @@ echo -e "\n${BLUE}Ensuring database with predictions table exists...${NC}"
 wait_for_db
 if ! docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "\dt predictions" 2>/dev/null | grep -q "predictions"; then
     echo -e "${NC}Predictions table not found${NC}"
-    init_database
+    initialise_database
 else
     echo -e "${GREEN}Predictions table already exists${NC}"
 fi
