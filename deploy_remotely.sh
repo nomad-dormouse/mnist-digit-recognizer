@@ -25,6 +25,12 @@ ssh -t -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
     trap 'echo -e "${RED}Command failed at line $LINENO${NC}"; exit 1' ERR
 
     echo -e "${GREEN}Connected to remote server ${REMOTE_USER}@${REMOTE_HOST}${NC}"
+
+    DISK_SPACE=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+    if [ "$DISK_SPACE" -gt 85 ]; then
+        echo -e "${BLUE}Disk is ${DISK_SPACE}% full, cleaning up...${NC}"
+        docker system prune -f
+    fi
     
     if [ -d "${REMOTE_DIR}" ]; then
         echo -e "\n${BLUE}Directory ${REMOTE_DIR} exists, removing it...${NC}"
