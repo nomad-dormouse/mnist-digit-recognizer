@@ -17,7 +17,7 @@ else
 fi
 
 # Now we can use variables from .env
-echo -e "\n${BLUE}Running local deployment script ${LOCAL_DEPLOYMENT_SCRIPT}...${NC}"
+echo -e "${BLUE}Running local deployment script ${LOCAL_DEPLOYMENT_SCRIPT}...${NC}"
 
 # Check if Docker is running
 check_docker_running() {
