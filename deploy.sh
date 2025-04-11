@@ -1,6 +1,10 @@
 #!/bin/bash
 # DEPLOYMENT SCRIPT FOR MNIST DIGIT RECOGNISER
 
+# Set error handling
+set -e
+trap 'echo -e "${RED}Script terminated${NC}"; exit 1' ERR
+
 # Check if Docker is running
 check_docker_running() {
     if docker info > /dev/null 2>&1; then
@@ -83,9 +87,9 @@ wait_for_db() {
     return 0
 }
 
-# Initialize database
-init_database() {
-    echo -e "${BLUE}Initializing database...${NC}"
+# Initialise database
+initialise_database() {
+    echo -e "${BLUE}Initialising database...${NC}"
     docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c "
         CREATE TABLE IF NOT EXISTS predictions (
             id SERIAL PRIMARY KEY,
@@ -93,7 +97,7 @@ init_database() {
             predicted_digit INTEGER NOT NULL,
             true_label INTEGER,
             confidence FLOAT NOT NULL
-        );" 2>/dev/null && echo -e "${GREEN}Database initialized successfully${NC}" || echo -e "${RED}Error initializing database${NC}"
+        );" 2>/dev/null && echo -e "${GREEN}Database initialised successfully${NC}" || echo -e "${RED}Database initialisation failed${NC}"
 }
 
 # Main execution
@@ -103,10 +107,10 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 # Load environment variables
 if [[ -f ".env" ]]; then
-    echo -e "${BLUE}Loading environment variables from .env...${NC}"
+    echo -e "\n${BLUE}Loading environment variables from .env...${NC}"
     source ".env"
 else
-    echo -e "${RED}Error: .env file not found$, so required environment variables cannot be loaded. Terminating script${NC}"
+    echo -e "${RED}.env file not found. Required environment variables cannot be loaded${NC}"
     exit 1
 fi
 
@@ -114,24 +118,26 @@ fi
 echo -e "\n${BLUE}Ensuring Docker is running...${NC}"
 if ! check_docker_running; then
     if ! start_docker; then
-        echo -e "${RED}Error: Docker could not be started. Terminating script.${NC}"
+        echo -e "${RED}Docker failed to start${NC}"
         exit 1
     fi
 fi
 
 # Stopping, building and starting containers
-echo -e "\n${BLUE}Rebuilding and starting containers...${NC}"
-echo -e "${BLUE}Stopping containers if running...${NC}"
+echo -e "\n${BLUE}Stopping containers if running...${NC}"
 docker stop ${WEB_CONTAINER_NAME} ${DB_CONTAINER_NAME} 2>/dev/null || true
-echo -e "${BLUE}Removing containers...${NC}"
+
+echo -e "\n${BLUE}Removing containers...${NC}"
 docker rm ${WEB_CONTAINER_NAME} ${DB_CONTAINER_NAME} 2>/dev/null || true
-echo -e "${BLUE}Building containers images...${NC}"
-docker-compose build --no-cache
-echo -e "${BLUE}Starting containers...${NC}"
-docker-compose up -d
+
+echo -e "\n${BLUE}Building containers images...${NC}"
+docker-compose build --no-cache || { echo -e "${RED}Failed to build container images${NC}"; exit 1; }
+
+echo -e "\n${BLUE}Starting containers...${NC}"
+docker-compose up -d || { echo -e "${RED}Failed to start containers${NC}"; exit 1; }
 sleep 3
-check_container ${WEB_CONTAINER_NAME}
-check_container ${DB_CONTAINER_NAME}
+check_container ${WEB_CONTAINER_NAME} || { echo -e "${RED}Web application container failed to start properly${NC}"; exit 1; }
+check_container ${DB_CONTAINER_NAME} || { echo -e "${RED}Database container failed to start properly${NC}"; exit 1; }
 
 # Ensure database is initialised
 echo -e "\n${BLUE}Ensuring database with predictions table exists...${NC}"
