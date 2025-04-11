@@ -3,7 +3,7 @@
 
 # Set error handling
 set -e
-trap 'echo -e "${RED}Script deploy.sh terminated${NC}"; exit 1' ERR
+trap 'echo -e "${RED}Script ${LOCAL_DEPLOY_SCRIPT} terminated${NC}"; exit 1' ERR
 
 # Check if Docker is running
 check_docker_running() {
