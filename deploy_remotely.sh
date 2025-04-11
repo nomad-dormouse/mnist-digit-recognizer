@@ -1,11 +1,11 @@
 #!/bin/bash
 # REMOTE EXECUTION SCRIPT FOR MNIST DIGIT RECOGNISER
 
-echo -e "${BLUE}Running remote deployment script ${REMOTE_DEPLOY_SCRIPT}...${NC}"
+echo -e "${BLUE}Running remote deployment script ${REMOTE_DEPLOYMENT_SCRIPT}...${NC}"
 
 # Set error handling
 set -e
-trap 'echo -e "${RED}Script ${REMOTE_DEPLOY_SCRIPT} terminated${NC}"; exit 1' ERR
+trap 'echo -e "${RED}Script ${REMOTE_DEPLOYMENT_SCRIPT} terminated${NC}"; exit 1' ERR
 
 # Connect to the remote server and execute the local deployment script
 ssh -t -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
@@ -24,8 +24,8 @@ ssh -t -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
 
     echo -e "\n${BLUE}Navigating to ${REMOTE_DIR} directory...${NC}"
     cd ${REMOTE_DIR} || { echo -e "${RED}Failed to navigate to directory${NC}"; exit 1; }
-    echo -e "${BLUE}Running local deployment script ${LOCAL_DEPLOY_SCRIPT}...${NC}"
-    ./${LOCAL_DEPLOY_SCRIPT} || { echo -e "${RED}Failed to run script ${LOCAL_DEPLOY_SCRIPT}${NC}"; exit 1; }
+    echo -e "${BLUE}Running local deployment script ${LOCAL_DEPLOYMENT_SCRIPT}...${NC}"
+    ./${LOCAL_DEPLOYMENT_SCRIPT} || { echo -e "${RED}Failed to run script ${LOCAL_DEPLOYMENT_SCRIPT}${NC}"; exit 1; }
     
 EOF
 
