@@ -92,7 +92,7 @@ wait_for_db() {
           ! docker exec ${DB_CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME} -c '\l' >/dev/null 2>&1; do
         attempts=$((attempts+1))
         if [[ $attempts -ge $max_attempts ]]; then
-            echo -e "${RED}Database is not ready. Checking logs:${NC}"
+            echo -e "\n${RED}Database is not ready. Checking logs for ${DB_CONTAINER_NAME}:${NC}"
             docker logs ${DB_CONTAINER_NAME}
             return 1
         fi
