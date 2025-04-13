@@ -135,10 +135,10 @@ if [ "${DISK_SPACE}" -gt 85 ]; then
 fi
 
 # Stopping, building and starting containers
-echo -e "\n${BLUE}Stopping containers if running...${NC}"
-docker stop ${WEB_CONTAINER_NAME} ${DB_CONTAINER_NAME} 2>/dev/null || true
+echo -e "\n${BLUE}Stopping all containers...${NC}"
+docker stop $(docker ps -a -q) 2>/dev/null || true
 
-echo -e "\n${BLUE}Removing containers...${NC}"
+echo -e "\n${BLUE}Removing web and database containers if exist...${NC}"
 docker rm ${WEB_CONTAINER_NAME} ${DB_CONTAINER_NAME} 2>/dev/null || true
 
 echo -e "\n${BLUE}Building containers images...${NC}"
