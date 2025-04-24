@@ -1,10 +1,6 @@
 #!/bin/bash
 # REMOTE EXECUTION SCRIPT FOR MNIST DIGIT RECOGNISER
 
-# Set error handling
-set -e
-trap 'echo "Remote deployment script terminated with error"; exit 1' ERR
-
 # Change to script directory which is project root
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
@@ -25,8 +21,8 @@ for var in "${required_vars[@]}"; do
     fi
 done
 
-echo -e "${BLUE}Starting remote deployment for MNIST Digit Recogniser...${NC}"
-echo -e "${BLUE}Connecting to remote server: ${REMOTE_USER}@${REMOTE_HOST}${NC}"
+echo -e "\n${BLUE}Starting remote deployment for MNIST Digit Recogniser...${NC}"
+echo -e "\n${BLUE}Connecting to remote server: ${REMOTE_USER}@${REMOTE_HOST}${NC}"
 
 # Connect to the remote server and execute the deployment
 ssh -t -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
@@ -35,19 +31,21 @@ ssh -t -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
 
     echo -e "${GREEN}Connected to remote server ${REMOTE_HOST}${NC}"
     
-    # Check if project directory exists, remove if it does
-    if [ -d "${REMOTE_DIR}" ]; then
-        echo -e "${BLUE}Removing existing project directory...${NC}"
-        rm -rf "${REMOTE_DIR}"
-    fi
+    echo -e "\n${BLUE}Checking for system updates...${NC}"
+    sudo apt-get update
+    echo -e "\n${BLUE}Upgrading system packages...${NC}"
+    sudo apt-get upgrade -y
+    echo -e "\n${BLUE}Removing unnecessary packages...${NC}"
+    sudo apt-get autoremove -y
+    echo -e "\n${BLUE}Cleaning package cache...${NC}"
+    sudo apt-get clean
     
-    # Clone the repository
-    echo -e "${BLUE}Cloning repository from ${REPO_URL}...${NC}"
+    echo -e "\n${BLUE}Cloning repository from ${REPO_URL}...${NC}"
+    rm -rf "${REMOTE_DIR}"
     git clone "${REPO_URL}"
     cd "${REMOTE_DIR}"
     
-    # Run the deployment script
-    echo -e "${BLUE}Running deployment script on remote server...${NC}"
+    echo -e "\n${BLUE}Running deployment script on remote server...${NC}"
     chmod +x deploy.sh
     ./deploy.sh remotely
 EOF

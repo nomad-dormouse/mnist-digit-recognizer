@@ -50,7 +50,8 @@ docker system prune -a -f
 
 # First, build and run only the model training service
 echo -e "${BLUE}Build a fresh image of model training service, run it and remove it after...${NC}"
-docker-compose run --build --rm ${MODEL_SERVICE_NAME}
+docker-compose build ${MODEL_SERVICE_NAME}
+docker-compose run --rm ${MODEL_SERVICE_NAME}
 if [ $? -ne 0 ]; then
         echo "Model training/verification failed"
         exit 1
