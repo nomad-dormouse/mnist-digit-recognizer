@@ -53,10 +53,10 @@ echo -e "${BLUE}Build a fresh image of model training service, run it and remove
 docker-compose build ${MODEL_SERVICE_NAME}
 docker-compose run --rm ${MODEL_SERVICE_NAME}
 if [ $? -ne 0 ]; then
-        echo "Model training/verification failed"
-        exit 1
+    echo -e "${RED}Model training/verification failed${NC}"
+    exit 1
 fi
-echo "Model training/verification completed successfully"
+echo -e "${GREEN}Model training/verification completed successfully${NC}"
 
 # Now start the remaining services
 echo -e "${BLUE}Starting database and web application services...${NC}"
