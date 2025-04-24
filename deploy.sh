@@ -66,7 +66,7 @@ docker-compose up -d --build ${DB_SERVICE_NAME} ${WEB_SERVICE_NAME}
 echo -e "${BLUE}Waiting for database to be ready...${NC}"
 for attempt in {1..10}; do
     if docker exec "${DB_CONTAINER_NAME}" pg_isready -U "${DB_USER}" -d "${DB_NAME}" > /dev/null 2>&1; then
-        echo -e "\n${GREEN}Database is ready${NC}"
+        echo -e "${GREEN}Database is ready${NC}"
         break
     fi
     echo -n "."
