@@ -18,7 +18,8 @@ RUN apt-get update && \
 
 # Install Python dependencies
 ARG WEB_REQUIREMENTS_NAME
-RUN pip install --no-cache-dir -r ${WEB_REQUIREMENTS_NAME} && \
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r ${WEB_REQUIREMENTS_NAME} && \
     rm -rf /root/.cache/pip
 
 # Run the Streamlit app

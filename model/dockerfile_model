@@ -17,7 +17,8 @@ RUN apt-get update && \
 
 # Install Python dependencies
 ARG MODEL_REQUIREMENTS_NAME
-RUN pip install --no-cache-dir -r ${MODEL_REQUIREMENTS_NAME} && \
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r ${MODEL_REQUIREMENTS_NAME} && \
     rm -rf /root/.cache/pip
 
 # Run model training

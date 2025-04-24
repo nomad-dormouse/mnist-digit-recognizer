@@ -120,7 +120,7 @@ def save_model(model, accuracy, config):
         model_py_src = Path(current_dir) / config['paths']['model_file'].name
         model_py_dest = config['paths']['model_file']
         shutil.copy2(model_py_src, model_py_dest)
-        print(f"Copied {model_py_src.name} to {model_py_dest}")
+        print(f"Copied {model_py_src.name} to {model_py_dest}\n")
     except Exception as e:
         print(f"ERROR: Could not copy model definition file: {e}")
         sys.exit(1)
