@@ -77,13 +77,20 @@ for attempt in {1..10}; do
     fi
 done
 
-# Verify web service is running
-echo -e "${BLUE}Verifying web service...${NC}"
-if ! docker-compose ps ${WEB_SERVICE_NAME} | grep -q "Up"; then
-    echo -e "${RED}Web service failed to start'${NC}"
-    exit 1
-fi
-echo -e "${GREEN}Web service is running${NC}"
+# Verify web application service is running
+echo -e "${BLUE}Waiting for web application service to be responsive...${NC}"
+for attempt in {1..10}; do
+    if curl -s "http://localhost:${WEB_PORT}" > /dev/null; then
+        echo -e "\n${GREEN}Web application service is responsive on port ${WEB_PORT}${NC}"
+        break
+    fi
+    echo -n "."
+    sleep 1
+    if [[ $attempt -eq 10 ]]; then
+        echo -e "\n${RED}Web application service did NOT respond in time${NC}"
+        exit 1
+    fi
+done
 
 # Remove all unused containers, images, and volumes
 echo -e "${BLUE}Removing all unused containers, images, and volumes...${NC}"
