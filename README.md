@@ -8,44 +8,14 @@ A full-stack machine learning application that allows users to draw digits and g
 
 ## Features
 
-- Deep learning model for handwritten digit classification (PyTorch)
-- Interactive web interface with drawing canvas (Streamlit)
-- Database for prediction logging and analytics (PostgreSQL)
-- Containerized deployment with Docker and Docker Compose
-- Automated model training and verification
-- Prediction history tracking with user feedback
-
-## Project Overview
-
-This project demonstrates an end-to-end machine learning application that:
-
-1. Implements a PyTorch Convolutional Neural Network (CNN) trained on the MNIST dataset
-2. Provides an intuitive web interface for drawing digits and receiving real-time predictions
-3. Records predictions and user feedback in a PostgreSQL database for continuous improvement
-4. Deploys seamlessly using containerization for consistent environments
-
-## Project Structure
-
-```
-project_root/
-├── database/                # Database related files
-│   └── init.sql            # Database initialization script
-├── model/                   # Model training and inference
-│   ├── model.py            # Model architecture definition
-│   ├── train.py            # Model training script
-│   ├── dockerfile_model    # Dockerfile for model training
-│   └── requirements_model.txt  # Python dependencies for model
-├── webapp/                  # Web application
-│   ├── webapp.py           # Streamlit web application
-│   ├── dockerfile_webapp   # Dockerfile for web application
-│   └── requirements_webapp.txt # Python dependencies for webapp
-├── docker-compose.yml      # Docker services configuration
-├── deploy.sh               # Deployment script
-├── .env.template           # Template for environment variables
-└── .env                    # Environment variables (create from template)
-```
+- Draw digits and get instant predictions
+- View prediction history and provide feedback
+- Containerized deployment with Docker
+- PostgreSQL database for analytics
 
 ## Quick Start
+
+### Local Deployment
 
 1. Clone the repository:
    ```bash
@@ -53,49 +23,39 @@ project_root/
    cd mnist-digit-recogniser
    ```
 
-2. Create `.env` file from template:
+2. Create `.env` file:
    ```bash
    cp .env.template .env
    ```
 
-3. Run the deployment script:
+3. Deploy locally:
    ```bash
    ./deploy.sh
    ```
 
-4. Access the application at `http://localhost:8501`
+4. Access at `http://localhost:8501`
 
-## Components
+### Remote Deployment
 
-### Model Training
-- Implements CNN using PyTorch
-- Handles model training and validation
-- Supports loading existing models
+1. Deploy to remote server:
+   ```bash
+   ./deploy_remotely.sh
+   ```
 
-### Web Application
-- Drawing canvas for digit input
-- Real-time predictions with confidence scores
-- Prediction history display
-- User feedback collection
+2. Access at `http://your-server-ip:8501`
 
-### Database
-- PostgreSQL database for prediction logging
-- Stores predictions, timestamps, and user feedback
+## Project Structure
 
-## Development
-
-### Model Training
-To manually trigger training:
-```bash
-docker-compose run --rm --build mnist_model_service
 ```
-
-### Logs
-To view service logs:
-```bash
-docker-compose logs [service_name]
+project_root/
+├── database/                # Database files
+├── model/                   # ML model files
+├── webapp/                  # Web application
+├── docker-compose.yml      # Docker configuration
+├── deploy.sh               # Local deployment
+└── deploy_remotely.sh      # Remote deployment
 ```
 
 ## License
 
-[MIT License](LICENSE) 
+[MIT License](LICENSE)
