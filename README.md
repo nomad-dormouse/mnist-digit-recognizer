@@ -4,8 +4,6 @@ A full-stack machine learning application that allows users to draw digits and g
 
 **Live Demo**: [http://37.27.197.79:8501](http://37.27.197.79:8501)
 
-**GitHub Repository**: [https://github.com/nomad-dormouse/mnist-digit-recogniser](https://github.com/nomad-dormouse/mnist-digit-recogniser)
-
 ## Features
 
 - Draw digits and get instant predictions
@@ -71,8 +69,3 @@ mnist-digit-recogniser/
 ├── .gitignore                # Git ignore rules
 └── README.md                 # Project documentation
 ```
-
-## License
-
-[MIT License](LICENSE)
-
