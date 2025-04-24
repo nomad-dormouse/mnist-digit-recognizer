@@ -1,0 +1,24 @@
+# MNIST MODEL TRAINING DOCKERFILE FOR MODEL TRAINING CONTAINER
+
+# Base image
+FROM python:3.11-slim
+
+# Copy files from local parent directory to container's working directory
+ARG CONTAINER_WORKDIR_NAME
+WORKDIR /${CONTAINER_WORKDIR_NAME}
+COPY . .
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+    && apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+ARG MODEL_REQUIREMENTS_NAME
+RUN pip install --no-cache-dir -r ${MODEL_REQUIREMENTS_NAME} && \
+    rm -rf /root/.cache/pip
+
+# Run model training
+CMD ["python", "train.py"]

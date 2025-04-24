@@ -1,63 +1,92 @@
-# MNIST DIGIT RECOGNISER APPLICATION
-# Docker Compose configuration file
-
+# MNIST DIGIT RECOGNISER DOCKER-COMPOSE FILE
 services:
-  # WEB APPLICATION SERVICE
-  web:
-    container_name: ${WEB_CONTAINER_NAME}
+  
+  # MODEL TRAINING SERVICE
+  mnist_model_service:
+    container_name: ${MODEL_CONTAINER_NAME}
     build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "${APP_PORT}:${APP_PORT}"
+      context: ./${MODEL_DIR_NAME}
+      dockerfile: ${MODEL_DOCKERFILE_NAME}
+      args:
+        MODEL_REQUIREMENTS_NAME: ${MODEL_REQUIREMENTS_NAME}
+    image: ${MODEL_IMAGE_NAME}:latest
     environment:
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - MODEL_PATH=/app/model/trained_model.pth
-      - PYTHONUNBUFFERED=1
-      - STREAMLIT_SERVER_HEADLESS=true
+      - MODEL_BATCH_SIZE=${MODEL_BATCH_SIZE}
+      - MODEL_EPOCHS=${MODEL_EPOCHS}
+      - MODEL_LEARNING_RATE=${MODEL_LEARNING_RATE}
+      - MODEL_MOMENTUM=${MODEL_MOMENTUM}
+      - CONTAINER_WORKDIR_NAME=${CONTAINER_WORKDIR_NAME}
+      - DATASET_DIR_NAME=${DATASET_DIR_NAME}
+      - TRAINED_MODEL_DIR_NAME=${TRAINED_MODEL_DIR_NAME}
+      - TRAINED_MODEL_NAME=${TRAINED_MODEL_NAME}
+      - MODEL_FILE_NAME=${MODEL_FILE_NAME}
+      - PYTHONUNBUFFERED=${PYTHONUNBUFFERED}
     volumes:
-      - ./model:/app/model:ro
-      - ./model/trained_model.pth:/app/model/trained_model.pth:ro
-    depends_on:
-      - db
-    restart: unless-stopped
+      - ./${MODEL_DIR_NAME}:/${CONTAINER_WORKDIR_NAME}
+      - mnist_trained_model_volume:/${CONTAINER_WORKDIR_NAME}/${TRAINED_MODEL_DIR_NAME}
     networks:
-      - app-network
-
+      - ${DOCKER_NETWORK_NAME}
+  
   # DATABASE SERVICE
-  db:
+  mnist_database_service:
     container_name: ${DB_CONTAINER_NAME}
-    image: postgres:${DB_VERSION}
+    image: ${DB_IMAGE_NAME}:latest
     environment:
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_INITDB_ARGS=${POSTGRES_INITDB_ARGS}
-      - PGDATA=${PGDATA}
+      - CONTAINER_WORKDIR_NAME=${CONTAINER_WORKDIR_NAME}
+      - DB_DIR_NAME=${DB_DIR_NAME}
     ports:
       - "${DB_PORT}:${DB_PORT}"
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-      - mnist-digit-recogniser-db-volume:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME} -h localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
+      - ./${DB_DIR_NAME}:/${CONTAINER_WORKDIR_NAME}
+      - ./${DB_DIR_NAME}/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mnist_database_volume:/var/lib/postgresql/data
     networks:
-      - app-network
+      - ${DOCKER_NETWORK_NAME}
+
+  # WEB APPLICATION SERVICE
+  mnist_webapp_service:
+    container_name: ${WEB_CONTAINER_NAME}
+    build:
+      context: ./${WEB_DIR_NAME}
+      dockerfile: ${WEB_DOCKERFILE_NAME}
+      args:
+        WEB_REQUIREMENTS_NAME: ${WEB_REQUIREMENTS_NAME}
+    image: ${WEB_IMAGE_NAME}:latest
+    ports:
+      - "${WEB_PORT}:${WEB_PORT}"
+    environment:
+      - DB_SERVICE_NAME=${DB_SERVICE_NAME}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_TIMEOUT=${DB_TIMEOUT}
+      - CONTAINER_WORKDIR_NAME=${CONTAINER_WORKDIR_NAME}
+      - TRAINED_MODEL_DIR_NAME=${TRAINED_MODEL_DIR_NAME}
+      - TRAINED_MODEL_NAME=${TRAINED_MODEL_NAME}
+      - MODEL_FILE_NAME=${MODEL_FILE_NAME}
+      - STREAMLIT_SERVER_HEADLESS=${STREAMLIT_SERVER_HEADLESS}
+      - PYTHONUNBUFFERED=${PYTHONUNBUFFERED}
+    volumes:
+      - ./${WEB_DIR_NAME}:/${CONTAINER_WORKDIR_NAME}
+      - mnist_trained_model_volume:/${CONTAINER_WORKDIR_NAME}/${TRAINED_MODEL_DIR_NAME}
+    networks:
+      - ${DOCKER_NETWORK_NAME}
+    depends_on:
+      - mnist_database_service
 
 # VOLUME CONFIGURATION
 volumes:
-  mnist-digit-recogniser-db-volume:
+  mnist_database_volume:
     name: ${DB_VOLUME_NAME}
+  mnist_trained_model_volume:
+    name: ${TRAINED_MODEL_VOLUME_NAME}
 
 # NETWORK CONFIGURATION
 networks:
-  app-network:
-    name: ${NETWORK_NAME}
+  mnist_network:
+    name: ${DOCKER_NETWORK_NAME}
+    

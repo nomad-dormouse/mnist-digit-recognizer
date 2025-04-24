@@ -1,36 +1,67 @@
-# Temporary ignoring
-deploy_remotely_new.sh
-
-# Directory containing dataset files
-model/data/*
-!model/data/MNIST/
-model/data/MNIST/*
-!model/data/MNIST/view_mnist_samples.py
-!model/trained_model.pth
-
-# Python virtual environment folder containing installed dependencies
-venv/
-env/
-
-# Python cache files
+# Python related
 __pycache__/
 *.py[cod]
 *$py.class
-.pytest_cache/
-.coverage
-htmlcov/
+venv/
+env/
+*.pyc
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# System files
+# Environment files
+.env
+.env.local
+
+# Dataset and model files
+**/dataset/
+**/trained_model/
+model/data/
+*.pth
+*.pt
+*.ckpt
+
+# Database
+*.sqlite
+*.db
+pgdata/
+
+# Logs and temporary files
+*.log
+logs/
+tmp/
+temp/
+.tmp/
+.temp/
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# System and IDE files
 .DS_Store
 .idea/
 .vscode/
 *.swp
 *.swo
+*~
+.*.sw[po]
+Thumbs.db
 
-# Logs
-logs/
-*.log
-
-# Temporary files
-tmp/
-temp/
+# Project specific
+**/MNIST/
+mnist_trained_model_volume/
+mnist_database_volume/

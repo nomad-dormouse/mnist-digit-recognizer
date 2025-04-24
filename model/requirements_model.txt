@@ -1,0 +1,16 @@
+# MNIST MODEL TRAINING REQUIREMENTS FOR MODEL TRAINING CONTAINER
+
+# PyTorch for deep learning
+torch>=2.0.0
+
+# Computer vision utilities for PyTorch
+torchvision>=0.15.0
+
+# Numerical computations
+numpy>=1.24.0
+
+# Progress bars for training loops
+tqdm>=4.65.0
+
+# For metrics and evaluation
+scikit-learn>=1.2.0

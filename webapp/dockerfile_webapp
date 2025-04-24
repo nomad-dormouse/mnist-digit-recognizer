@@ -1,0 +1,25 @@
+# MNIST DIGIT RECOGNISER DOCKERFILE FOR WEB APPLICATION CONTAINER
+
+# Base image
+FROM python:3.11-slim
+
+# Copy files from local parent directory to container's working directory
+ARG CONTAINER_WORKDIR_NAME
+WORKDIR /${WORKDIR_PATH}
+COPY . .
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        libpq-dev \
+    && apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+ARG WEB_REQUIREMENTS_NAME
+RUN pip install --no-cache-dir -r ${WEB_REQUIREMENTS_NAME} && \
+    rm -rf /root/.cache/pip
+
+# Run the Streamlit app
+CMD ["streamlit", "run", "webapp.py", "--server.address=0.0.0.0"]
