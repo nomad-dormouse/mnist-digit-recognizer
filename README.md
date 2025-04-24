@@ -23,10 +23,11 @@ A full-stack machine learning application that allows users to draw digits and g
    cd mnist-digit-recogniser
    ```
 
-2. Create `.env` file:
+2. Set up environment variables:
    ```bash
    cp .env.template .env
    ```
+   Then edit `.env` file to update configuration specific to your environment
 
 3. Deploy locally:
    ```bash
@@ -53,15 +54,12 @@ mnist-digit-recogniser/
 │   └── init.sql                # Database initialization script
 │
 ├── model/                      # Machine learning model
-│   ├── dataset/               # MNIST dataset directory
-│   ├── trained_model/         # Saved model outputs
 │   ├── model.py              # Model architecture
 │   ├── train.py              # Training script
 │   ├── dockerfile_model      # Model training container
 │   └── requirements_model.txt # Model dependencies
 │
 ├── webapp/                     # Web application
-│   ├── trained_model/         # Model for inference
 │   ├── webapp.py             # Streamlit application
 │   ├── dockerfile_webapp     # Web app container
 │   └── requirements_webapp.txt # Web app dependencies
