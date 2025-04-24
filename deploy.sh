@@ -66,7 +66,7 @@ docker-compose up -d --build ${DB_SERVICE_NAME} ${WEB_SERVICE_NAME}
 echo -e "${BLUE}Waiting for database to be ready...${NC}"
 for attempt in {1..10}; do
     if docker exec "${DB_CONTAINER_NAME}" pg_isready -U "${DB_USER}" -d "${DB_NAME}" > /dev/null 2>&1; then
-        echo -e "${GREEN}Database is ready${NC}"
+        echo -e "\n${GREEN}Database is ready${NC}"
         break
     fi
     echo -n "."
@@ -77,13 +77,17 @@ for attempt in {1..10}; do
     fi
 done
 
-# Verify all services are running
-echo -e "${BLUE}Verifying all services...${NC}"
-docker system prune -a -f
-if ! docker-compose ps | grep -q "Up"; then
-    echo -e "${RED}Some services failed to start. Check the logs with 'docker-compose logs'${NC}"
+# Verify web service is running
+echo -e "${BLUE}Verifying web service...${NC}"
+if ! docker-compose ps ${WEB_SERVICE_NAME} | grep -q "Up"; then
+    echo -e "${RED}Web service failed to start'${NC}"
     exit 1
 fi
+echo -e "${GREEN}Web service is running${NC}"
+
+# Remove all unused containers, images, and volumes
+echo -e "${BLUE}Removing all unused containers, images, and volumes...${NC}"
+docker system prune -a -f
 
 # Set the host to localhost if running locally, or the remote host if running remotely
 HOST="localhost"
