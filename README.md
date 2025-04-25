@@ -7,9 +7,35 @@ A full-stack machine learning application that allows users to draw digits and g
 ## Features
 
 - Draw digits and get instant predictions
-- View prediction history and provide feedback
-- Containerized deployment with Docker
+- Containerized microservices architecture with Docker
 - PostgreSQL database for analytics
+
+
+## Architecture
+
+The application consists of four main services:
+
+1. **Model Training Service** (`model/`)
+   - Trains the CNN model on MNIST dataset
+   - Handles data preprocessing and normalization
+   - Saves trained model weights and architecture
+
+2. **Web Server Service** (`webserver/`)
+   - FastAPI backend for model inference
+   - Handles image processing and predictions
+   - Manages database interactions
+   - Provides RESTful API endpoints
+
+3. **Web Application Service** (`webapp/`)
+   - Streamlit-based user interface
+   - Drawing canvas for digit input
+   - Real-time prediction display
+   - Prediction history visualization
+
+4. **Database Service** (`database/`)
+   - PostgreSQL database
+   - Stores prediction history
+   - Enables analytics and feedback collection
 
 ## Quick Start
 
@@ -48,24 +74,30 @@ A full-stack machine learning application that allows users to draw digits and g
 ```
 mnist-digit-recogniser/
 │
-├── database/                    # Database configuration
-│   └── init.sql                # Database initialization script
+├── database/                   # Database service
+│   └── init.sql              # Database initialization
 │
-├── model/                      # Machine learning model
-│   ├── model.py              # Model architecture
-│   ├── train.py              # Training script
-│   ├── dockerfile_model      # Model training container
+├── model/                      # Model training service
+│   ├── model.py               # CNN model architecture
+│   ├── train.py               # Training script
+│   ├── dataset/               # MNIST dataset directory
+│   │   └── MNIST/            # Downloaded dataset
+│   ├── trained_model/         # Saved model files
+│   ├── dockerfile_model       # Model container config
 │   └── requirements_model.txt # Model dependencies
 │
-├── webapp/                     # Web application
-│   ├── webapp.py             # Streamlit application
-│   ├── dockerfile_webapp     # Web app container
-│   └── requirements_webapp.txt # Web app dependencies
+├── webserver/                  # FastAPI backend service
+│   ├── webserver.py          # API endpoints and inference
+│   ├── dockerfile_webserver   # Server container config
+│   └── requirements_webserver.txt # Server dependencies
 │
-├── docker-compose.yml         # Docker services config
-├── deploy.sh                  # Local deployment script
-├── deploy_remotely.sh         # Remote deployment script
+├── webapp/                     # Streamlit frontend service
+│   ├── webapp.py             # User interface
+│   ├── dockerfile_webapp      # Frontend container config
+│   └── requirements_webapp.txt # Frontend dependencies
+│
+├── docker-compose.yml         # Services orchestration
 ├── .env.template              # Environment template
 ├── .gitignore                # Git ignore rules
-└── README.md                 # Project documentation
+└── README.md                 # Documentation
 ```
