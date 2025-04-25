@@ -1,5 +1,4 @@
 #!/bin/bash
-# DEPLOYMENT SCRIPT FOR MNIST DIGIT RECOGNISER
 
 # Set error handling
 set -e
@@ -59,8 +58,8 @@ fi
 echo -e "${GREEN}Model training/verification completed successfully${NC}"
 
 # Now start the remaining services
-echo -e "${BLUE}Starting database and web application services...${NC}"
-docker-compose up -d --build ${DB_SERVICE_NAME} ${WEB_SERVICE_NAME}
+echo -e "${BLUE}Starting database, web server and web application services...${NC}"
+docker-compose up -d --build ${DB_SERVICE_NAME} ${WEBSERVER_SERVICE_NAME} ${WEBAPP_SERVICE_NAME}
 
 # Wait for database to be ready
 echo -e "${BLUE}Waiting for database to be ready...${NC}"
@@ -77,17 +76,32 @@ for attempt in {1..10}; do
     fi
 done
 
-# Verify web application service is running
-echo -e "${BLUE}Waiting for web application service to be responsive...${NC}"
+# Check web server container health status
+echo -e "${BLUE}Checking web server container health status...${NC}"
 for attempt in {1..10}; do
-    if curl -s "http://localhost:${WEB_PORT}" > /dev/null; then
-        echo -e "\n${GREEN}Web application service is responsive on port ${WEB_PORT}${NC}"
+    if curl -s "http://localhost:${WEBSERVER_PORT}/health" | grep -q "healthy"; then
+        echo -e "\n${GREEN}Web server container health check passed${NC}"
         break
     fi
     echo -n "."
     sleep 1
     if [[ $attempt -eq 10 ]]; then
-        echo -e "\n${RED}Web application service did NOT respond in time${NC}"
+        echo -e "\n${RED}Web server container health check failed${NC}"
+        exit 1
+    fi
+done
+
+# Verify web application service is running
+echo -e "${BLUE}Waiting for web application service to be responsive...${NC}"
+for attempt in {1..10}; do
+    if curl -s "http://localhost:${WEBAPP_PORT}" > /dev/null; then
+        echo -e "\n${GREEN}Web application service is responsive on port ${WEBAPP_PORT}${NC}"
+        break
+    fi
+    echo -n "."
+    sleep 1
+    if [[ $attempt -eq 10 ]]; then
+        echo -e "\n${RED}Web application service did not respond in time${NC}"
         exit 1
     fi
 done
@@ -103,4 +117,4 @@ if [[ "$1" == "remotely" ]]; then
 fi
 
 echo -e "${GREEN}Deployment completed successfully!${NC}"
-echo -e "${YELLOW}The web application is available at: http://${HOST}:${WEB_PORT}${NC}"
+echo -e "${YELLOW}The web application is available at: http://${HOST}:${WEBAPP_PORT}${NC}"

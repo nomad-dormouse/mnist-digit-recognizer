@@ -1,5 +1,3 @@
-# MNIST MODEL TRAINING REQUIREMENTS FOR MODEL TRAINING CONTAINER
-
 # PyTorch for deep learning
 torch>=2.0.0
 

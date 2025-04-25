@@ -1,5 +1,4 @@
 #!/bin/bash
-# REMOTE EXECUTION SCRIPT FOR MNIST DIGIT RECOGNISER
 
 # Change to script directory which is project root
 cd "$(dirname "${BASH_SOURCE[0]}")"
@@ -13,7 +12,7 @@ else
 fi
 
 # Check required environment variables
-required_vars=("REMOTE_USER" "REMOTE_HOST" "SSH_KEY" "REMOTE_DIR" "REPO_URL" "WEB_PORT")
+required_vars=("REMOTE_USER" "REMOTE_HOST" "SSH_KEY" "REMOTE_DIR" "REPO_URL" "WEBAPP_PORT")
 for var in "${required_vars[@]}"; do
     if [[ -z "${!var}" ]]; then
         echo "ERROR: Required environment variable $var is not set"

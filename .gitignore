@@ -65,3 +65,6 @@ Thumbs.db
 **/MNIST/
 mnist_trained_model_volume/
 mnist_database_volume/
+webserver/__pycache__/
+webapp/__pycache__/
+.streamlit/

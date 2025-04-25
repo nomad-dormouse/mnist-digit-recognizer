@@ -1,4 +1,3 @@
-# MNIST DIGIT RECOGNISER DOCKER-COMPOSE FILE
 services:
   
   # MODEL TRAINING SERVICE
@@ -8,9 +7,13 @@ services:
       context: ./${MODEL_DIR_NAME}
       dockerfile: ${MODEL_DOCKERFILE_NAME}
       args:
+        CONTAINER_WORKDIR_NAME: ${CONTAINER_WORKDIR_NAME}
         MODEL_REQUIREMENTS_NAME: ${MODEL_REQUIREMENTS_NAME}
     image: ${MODEL_IMAGE_NAME}:latest
     environment:
+      - MNIST_DATASET_IMAGE_SIZE=${MNIST_DATASET_IMAGE_SIZE}
+      - MNIST_DATASET_MEAN=${MNIST_DATASET_MEAN}
+      - MNIST_DATASET_STD=${MNIST_DATASET_STD}
       - MODEL_BATCH_SIZE=${MODEL_BATCH_SIZE}
       - MODEL_EPOCHS=${MODEL_EPOCHS}
       - MODEL_LEARNING_RATE=${MODEL_LEARNING_RATE}
@@ -32,11 +35,11 @@ services:
     container_name: ${DB_CONTAINER_NAME}
     image: ${DB_IMAGE_NAME}:latest
     environment:
+      - CONTAINER_WORKDIR_NAME=${CONTAINER_WORKDIR_NAME}
+      - DB_DIR_NAME=${DB_DIR_NAME}
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - CONTAINER_WORKDIR_NAME=${CONTAINER_WORKDIR_NAME}
-      - DB_DIR_NAME=${DB_DIR_NAME}
     ports:
       - "${DB_PORT}:${DB_PORT}"
     volumes:
@@ -46,17 +49,19 @@ services:
     networks:
       - ${DOCKER_NETWORK_NAME}
 
-  # WEB APPLICATION SERVICE
-  mnist_webapp_service:
-    container_name: ${WEB_CONTAINER_NAME}
+  # WEB SERVER SERVICE
+  mnist_webserver_service:
+    container_name: ${WEBSERVER_CONTAINER_NAME}
     build:
-      context: ./${WEB_DIR_NAME}
-      dockerfile: ${WEB_DOCKERFILE_NAME}
+      context: ./${WEBSERVER_DIR_NAME}
+      dockerfile: ${WEBSERVER_DOCKERFILE_NAME}
       args:
-        WEB_REQUIREMENTS_NAME: ${WEB_REQUIREMENTS_NAME}
-    image: ${WEB_IMAGE_NAME}:latest
+        CONTAINER_WORKDIR_NAME: ${CONTAINER_WORKDIR_NAME}
+        WEBSERVER_REQUIREMENTS_NAME: ${WEBSERVER_REQUIREMENTS_NAME}
+        WEBSERVER_PORT: ${WEBSERVER_PORT}
+    image: ${WEBSERVER_IMAGE_NAME}:latest
     ports:
-      - "${WEB_PORT}:${WEB_PORT}"
+      - "${WEBSERVER_PORT}:${WEBSERVER_PORT}"
     environment:
       - DB_SERVICE_NAME=${DB_SERVICE_NAME}
       - DB_PORT=${DB_PORT}
@@ -68,15 +73,43 @@ services:
       - TRAINED_MODEL_DIR_NAME=${TRAINED_MODEL_DIR_NAME}
       - TRAINED_MODEL_NAME=${TRAINED_MODEL_NAME}
       - MODEL_FILE_NAME=${MODEL_FILE_NAME}
-      - STREAMLIT_SERVER_HEADLESS=${STREAMLIT_SERVER_HEADLESS}
+      - MNIST_DATASET_IMAGE_SIZE=${MNIST_DATASET_IMAGE_SIZE}
+      - MNIST_DATASET_MEAN=${MNIST_DATASET_MEAN}
+      - MNIST_DATASET_STD=${MNIST_DATASET_STD}
       - PYTHONUNBUFFERED=${PYTHONUNBUFFERED}
+      - WEBSERVER_PORT=${WEBSERVER_PORT}
     volumes:
-      - ./${WEB_DIR_NAME}:/${CONTAINER_WORKDIR_NAME}
+      - ./${WEBSERVER_DIR_NAME}:/${CONTAINER_WORKDIR_NAME}
       - mnist_trained_model_volume:/${CONTAINER_WORKDIR_NAME}/${TRAINED_MODEL_DIR_NAME}
     networks:
       - ${DOCKER_NETWORK_NAME}
     depends_on:
       - mnist_database_service
+
+  # WEB APPLICATION SERVICE
+  mnist_webapp_service:
+    container_name: ${WEBAPP_CONTAINER_NAME}
+    build:
+      context: ./${WEBAPP_DIR_NAME}
+      dockerfile: ${WEBAPP_DOCKERFILE_NAME}
+      args:
+        WEBAPP_REQUIREMENTS_NAME: ${WEBAPP_REQUIREMENTS_NAME}
+    image: ${WEBAPP_IMAGE_NAME}:latest
+    ports:
+      - "${WEBAPP_PORT}:${WEBAPP_PORT}"
+    environment:
+      - WEBSERVER_SERVICE_NAME=${WEBSERVER_SERVICE_NAME}
+      - WEBSERVER_PORT=${WEBSERVER_PORT}
+      - PREDICTION_HISTORY_LIMIT=${PREDICTION_HISTORY_LIMIT}
+      - MNIST_DATASET_IMAGE_SIZE=${MNIST_DATASET_IMAGE_SIZE}
+      - STREAMLIT_SERVER_HEADLESS=${STREAMLIT_SERVER_HEADLESS}
+      - PYTHONUNBUFFERED=${PYTHONUNBUFFERED}
+    volumes:
+      - ./${WEBAPP_DIR_NAME}:/${CONTAINER_WORKDIR_NAME}
+    networks:
+      - ${DOCKER_NETWORK_NAME}
+    depends_on:
+      - mnist_webserver_service
 
 # VOLUME CONFIGURATION
 volumes:

@@ -7,36 +7,21 @@ import os
 import sys
 from pathlib import Path
 
-# Add current directory to path to make model imports work
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(current_dir)
-from model import MNISTModel
 
-# Environment variables setup
-ENV_VARS = {
-    'MODEL_BATCH_SIZE': None,
-    'MODEL_EPOCHS': None,
-    'MODEL_LEARNING_RATE': None,
-    'MODEL_MOMENTUM': None,
-    'CONTAINER_WORKDIR_NAME': None,
-    'DATASET_DIR_NAME': None,
-    'TRAINED_MODEL_DIR_NAME': None,
-    'TRAINED_MODEL_NAME': None,
-    'MODEL_FILE_NAME': None
-}
-
+# Load environment variables, return processed configuration
 def load_environment_variables():
-    """Load and validate environment variables, return processed configuration"""
-    # Load environment variables
     for var in ENV_VARS:
         ENV_VARS[var] = os.getenv(var)
         if ENV_VARS[var] is None:
             print(f"Error: Missing required environment variable: {var}")
             sys.exit(1)
     
-    # Convert environment variables to appropriate types and create config
     model_dir = Path(f"/{ENV_VARS['CONTAINER_WORKDIR_NAME']}/{ENV_VARS['TRAINED_MODEL_DIR_NAME']}")
     config = {
+        'dataset': {
+            'mean': float(ENV_VARS['MNIST_DATASET_MEAN']),
+            'std': float(ENV_VARS['MNIST_DATASET_STD'])
+        },
         'training': {
             'batch_size': int(ENV_VARS['MODEL_BATCH_SIZE']),
             'epochs': int(ENV_VARS['MODEL_EPOCHS']),
@@ -51,28 +36,28 @@ def load_environment_variables():
     }
     return config
 
+# Setup required directories
 def setup_directories(config):
-    """Create required directories."""
     config['paths']['dataset'].parent.mkdir(parents=True, exist_ok=True)
     config['paths']['model_weights'].parent.mkdir(parents=True, exist_ok=True)
 
+# Load and prepare MNIST datasets
 def load_datasets(config):
-    """Load and prepare MNIST datasets."""
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,))
+        transforms.Normalize((config['dataset']['mean'],), (config['dataset']['std'],))
     ])
     
     train_dataset = datasets.MNIST(config['paths']['dataset'], train=True, download=True, transform=transform)
     test_dataset = datasets.MNIST(config['paths']['dataset'], train=False, download=True, transform=transform)
     
     train_loader = DataLoader(train_dataset, batch_size=config['training']['batch_size'], shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=1000)
+    test_loader = DataLoader(test_dataset, batch_size=config['training']['batch_size'], shuffle=False)
     
     return train_loader, test_loader
 
+# Train the model for one epoch
 def train_epoch(model, train_loader, optimizer, device, current_epoch):
-    """Train the model for one epoch."""
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
@@ -87,8 +72,8 @@ def train_epoch(model, train_loader, optimizer, device, current_epoch):
             print(f'Epoch {current_epoch}: {batch_idx * len(data)}/{len(train_loader.dataset)} '
                   f'({progress:.0f}%) Loss: {loss.item():.6f}')
 
+# Evaluate the model on the test dataset
 def evaluate_model(model, test_loader, device):
-    """Evaluate the model on the test dataset."""
     model.eval()
     test_loss = 0
     correct = 0
@@ -105,16 +90,14 @@ def evaluate_model(model, test_loader, device):
     print(f'Test set: Loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} ({accuracy:.2f}%)')
     return accuracy
 
+# Save both model weights and model definition file
 def save_model(model, accuracy, config):
-    """Save both model weights and model definition file."""
     model_dir = config['paths']['model_weights'].parent
     model_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Save model weights
+
     torch.save(model.state_dict(), config['paths']['model_weights'])
     print(f"Model weights saved to {config['paths']['model_weights']} with accuracy: {accuracy:.2f}%")
     
-    # Copy current model definition to the same directory
     try:
         import shutil
         model_py_src = Path(current_dir) / config['paths']['model_file'].name
@@ -125,8 +108,8 @@ def save_model(model, accuracy, config):
         print(f"ERROR: Could not copy model definition file: {e}")
         sys.exit(1)
 
+# Try to load existing trained model using saved model definition
 def load_existing_model(config, device):
-    """Try to load existing trained model using saved model definition."""
     model_dir = config['paths']['model_weights'].parent
     weights_path = config['paths']['model_weights']
     model_py_path = config['paths']['model_file']
@@ -140,13 +123,10 @@ def load_existing_model(config, device):
         return None
     
     try:
-        # Add model directory to path so we can import from saved model file
         sys.path.insert(0, str(model_dir))
         
-        # Import MNISTModel from saved model file
         from model import MNISTModel
         
-        # Create model and load weights
         model = MNISTModel().to(device)
         state_dict = torch.load(weights_path, map_location=device)
         model.load_state_dict(state_dict)
@@ -158,12 +138,11 @@ def load_existing_model(config, device):
         print(f"Error loading existing model: {str(e)}")
         return None
     finally:
-        # Remove the temporary path we added
         if str(model_dir) in sys.path:
             sys.path.remove(str(model_dir))
 
+# Train a new model from scratch
 def train_model(config, device):
-    """Train a new model from scratch."""
     print("Initializing new model for training...")
     model = MNISTModel().to(device)
     
@@ -190,16 +169,14 @@ def train_model(config, device):
     
     print(f"Training completed! Best accuracy: {best_accuracy:.2f}%")
 
+# Main function to handle model training or loading
 def main():
-    """Main function to handle model training or loading"""
-    # Initialize configuration and device
     config = load_environment_variables()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
     
     setup_directories(config)
     
-    # Try to load existing model
     print("Attempting to load existing model...")
     model = load_existing_model(config, device)
     
@@ -210,7 +187,6 @@ def main():
     print("No valid existing model found - proceeding with training")
     train_model(config, device)
     
-    # Try to load the trained model to verify it
     print("Verifying trained model...")
     model = load_existing_model(config, device)
     if model is not None:
@@ -219,6 +195,27 @@ def main():
     else:
         print("ERROR: Failed to verify trained model")
         sys.exit(1)
+
+
+# Add current directory to path to make model imports work
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+from model import MNISTModel
+
+# Environment variables setup
+ENV_VARS = {
+    'MODEL_BATCH_SIZE': None,
+    'MODEL_EPOCHS': None,
+    'MODEL_LEARNING_RATE': None,
+    'MODEL_MOMENTUM': None,
+    'CONTAINER_WORKDIR_NAME': None,
+    'DATASET_DIR_NAME': None,
+    'TRAINED_MODEL_DIR_NAME': None,
+    'TRAINED_MODEL_NAME': None,
+    'MODEL_FILE_NAME': None,
+    'MNIST_DATASET_MEAN': None,
+    'MNIST_DATASET_STD': None,
+}
 
 if __name__ == '__main__':
     main() 
