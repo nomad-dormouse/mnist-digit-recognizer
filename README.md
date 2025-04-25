@@ -78,7 +78,6 @@ mnist-digit-recogniser/
 │   ├── model.py               # CNN model architecture
 │   ├── train.py               # Training script
 │   ├── dataset/               # MNIST dataset directory
-│   │   └── MNIST/            # Downloaded dataset
 │   ├── trained_model/         # Saved model files
 │   ├── dockerfile_model       # Model container config
 │   └── requirements_model.txt # Model dependencies
