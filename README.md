@@ -17,14 +17,12 @@ The application consists of four main services:
 
 1. **Model Training Service** (`model/`)
    - Trains the CNN model on MNIST dataset
-   - Handles data preprocessing and normalization
    - Saves trained model weights and architecture
 
 2. **Web Server Service** (`webserver/`)
    - FastAPI backend for model inference
    - Handles image processing and predictions
    - Manages database interactions
-   - Provides RESTful API endpoints
 
 3. **Web Application Service** (`webapp/`)
    - Streamlit-based user interface
@@ -35,7 +33,6 @@ The application consists of four main services:
 4. **Database Service** (`database/`)
    - PostgreSQL database
    - Stores prediction history
-   - Enables analytics and feedback collection
 
 ## Quick Start
 
