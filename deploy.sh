@@ -43,9 +43,17 @@ if ! docker info > /dev/null 2>&1; then
     fi
 fi
 
-# Remove all unused containers, images, and volumes
-echo -e "${BLUE}Removing all unused containers, images, and volumes...${NC}"
-docker system prune -a -f
+# Remove containers and images related to this project
+echo -e "${BLUE}Safely cleaning up existing MNIST project containers and images...${NC}"
+docker-compose down --remove-orphans 2>/dev/null || true
+docker-compose rm -f 2>/dev/null || true
+
+# Remove images built by this project
+echo -e "${BLUE}Removing old MNIST project images...${NC}"
+docker images --format "table {{.Repository}}:{{.Tag}}" | grep -E "mnist|digit" | grep -v REPOSITORY | while read image; do
+    echo "Removing image: $image"
+    docker rmi "$image" 2>/dev/null || true
+done
 
 # First, build and run only the model training service
 echo -e "${BLUE}Build a fresh image of model training service, run it and remove it after...${NC}"
@@ -106,9 +114,9 @@ for attempt in {1..10}; do
     fi
 done
 
-# Remove all unused containers, images, and volumes
-echo -e "${BLUE}Removing all unused containers, images, and volumes...${NC}"
-docker system prune -a -f
+# Clean up only dangling images (not used by any container)
+echo -e "${BLUE}Cleaning up dangling images...${NC}"
+docker image prune -f
 
 # Set the host to localhost if running locally, or the remote host if running remotely
 HOST="localhost"
