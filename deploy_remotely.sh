@@ -21,6 +21,10 @@ for var in "${required_vars[@]}"; do
 done
 
 echo -e "\n${BLUE}Starting remote deployment for MNIST Digit Recogniser...${NC}"
+
+echo -e "\n${BLUE}Copying .env file to remote server /tmp folder...${NC}"
+scp -i "${SSH_KEY}" ".env" "${REMOTE_USER}@${REMOTE_HOST}:/tmp/.env"
+
 echo -e "\n${BLUE}Connecting to remote server: ${REMOTE_USER}@${REMOTE_HOST}${NC}"
 
 # Connect to the remote server and execute the deployment
@@ -44,6 +48,13 @@ ssh -t -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
     git clone "${REPO_URL}"
     cd "${REMOTE_DIR}"
     
+    echo -e "\n${BLUE}Copying .env file from /tmp to project folder...${NC}"
+    cp /tmp/.env .env
+
+    echo -e "\n${BLUE}Cleaning up unnecessary files...${NC}"
+    rm -f /tmp/.env
+    rm -f deploy_remotely.sh
+
     echo -e "\n${BLUE}Running deployment script on remote server...${NC}"
     chmod +x deploy.sh
     ./deploy.sh remotely
