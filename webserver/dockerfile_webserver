@@ -17,7 +17,7 @@ RUN apt-get update && \
 # Install Python dependencies
 ARG WEBSERVER_REQUIREMENTS_NAME
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r ${WEBSERVER_REQUIREMENTS_NAME} && \
+    pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu -r ${WEBSERVER_REQUIREMENTS_NAME} && \
     rm -rf /root/.cache/pip
 
 # Run the FastAPI server using uvicorn
