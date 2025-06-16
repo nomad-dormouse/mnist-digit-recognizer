@@ -22,40 +22,39 @@ done
 
 echo -e "\n${BLUE}Starting remote deployment for MNIST Digit Recogniser...${NC}"
 
-echo -e "\n${BLUE}Copying .env file to remote server /tmp folder...${NC}"
+echo -e "\n${BLUE}Copying .env file to remote server...${NC}"
 scp -i "${SSH_KEY}" ".env" "${REMOTE_USER}@${REMOTE_HOST}:/tmp/.env"
 
-echo -e "\n${BLUE}Connecting to remote server: ${REMOTE_USER}@${REMOTE_HOST}${NC}"
-
-# Connect to the remote server and execute the deployment
+echo -e "\n${BLUE}Connecting to remote server and executing deployment script...${NC}"
 ssh -t -i "${SSH_KEY}" "${REMOTE_USER}@${REMOTE_HOST}" << EOF
     set -e
     trap 'echo "Command failed on remote server"; exit 1' ERR
 
     echo -e "${GREEN}Connected to remote server ${REMOTE_HOST}${NC}"
     
-    echo -e "\n${BLUE}Checking for system updates...${NC}"
-    sudo apt-get update
-    echo -e "\n${BLUE}Upgrading system packages...${NC}"
-    sudo apt-get upgrade -y
-    echo -e "\n${BLUE}Removing unnecessary packages...${NC}"
-    sudo apt-get autoremove -y
-    echo -e "\n${BLUE}Cleaning package cache...${NC}"
-    sudo apt-get clean
+    echo -e "\n${BLUE}Updating system packages...${NC}"
+    sudo apt-get update && \
+    sudo apt-get upgrade -y && \
+    sudo apt-get autoremove -y && \
+    sudo apt-get autoclean
+    
+    echo -e "\n${BLUE}Cleaning temporary and log files...${NC}"
+    sudo find /tmp /var/tmp -type f -mtime +1 -delete 2>/dev/null || true
+    sudo find /var/log -type f -name "*.log" -mtime +7 -delete 2>/dev/null || true
     
     echo -e "\n${BLUE}Cloning repository from ${REPO_URL}...${NC}"
     rm -rf "${REMOTE_DIR}"
     git clone "${REPO_URL}"
     cd "${REMOTE_DIR}"
     
-    echo -e "\n${BLUE}Copying .env file from /tmp to project folder...${NC}"
+    echo -e "\n${BLUE}Copying .env file to project directory...${NC}"
     cp /tmp/.env .env
-
-    echo -e "\n${BLUE}Cleaning up unnecessary files...${NC}"
-    rm -f /tmp/.env
-    rm -f deploy_remotely.sh
-
+    chmod 600 .env
+    
     echo -e "\n${BLUE}Running deployment script on remote server...${NC}"
     chmod +x deploy.sh
     ./deploy.sh remotely
+    
+    echo -e "\n${BLUE}Removing deployment files...${NC}"
+    rm -f /tmp/.env
 EOF
